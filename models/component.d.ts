@@ -3,7 +3,7 @@ import { Property } from './property';
 import { Observer } from './observer';
 import { Behavior } from './behavior';
 import { Listener } from './listener';
-export declare class Component extends ProgramPart {
+declare class Component extends ProgramPart {
     private _behaviors;
     private _className;
     private _htmlFilePath;
@@ -30,3 +30,4 @@ export declare class Component extends ProgramPart {
     private _writeMethods();
     private _writeObservers();
 }
+export { Component };

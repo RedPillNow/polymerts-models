@@ -7,6 +7,7 @@ import {HtmlComment} from './models/html-comment';
 import {Listener} from './models/listener';
 import {Observer} from './models/observer';
 import {Property} from './models/property';
+import * as Utils from './lib/utils';
 
 module.exports.Behavior = Behavior;
 module.exports.Comment = Comment;
@@ -17,3 +18,4 @@ module.exports.HtmlComment = HtmlComment;
 module.exports.Listener = Listener;
 module.exports.Observer = Observer;
 module.exports.Property = Property;
+module.exports.Utils = Utils;

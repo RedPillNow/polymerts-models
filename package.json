@@ -1,14 +1,11 @@
 {
-	"name": "polymerts-doc-generator",
-	"version": "1.0.15",
-	"description": "Generates Polymer documentation for a PolymerTS project which can then use iron-component-page to display the documentation",
+	"name": "polymerts-typescript-models",
+	"version": "1.0.0",
+	"description": "Models for the pieces of a Polymer element",
 	"keywords": [
-		"polymerts",
-		"polymer",
-		"iron-component-page",
-		"documentation"
+		"polymer"
 	],
-	"main": "dist/index.js",
+	"main": "index.js",
 	"scripts": {
 		"compile": "tsc",
 		"build": "tsc --outDir ./",
@@ -19,17 +16,9 @@
 		"email": "keith@redpillnow.com",
 		"url": "http://keithstric.me"
 	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/RedPillNow/polymerts-doc-generator"
-	},
-	"bugs": {
-		"url": "https://github.com/RedPillNow/polymerts-doc-generator/issues"
-	},
 	"license": "Apache-2.0",
 	"devDependencies": {
 		"@types/node": "^8.0.34",
-		"chai": "^4.1.2",
 		"del": "^3.0.0",
 		"gulp": "^3.9.1",
 		"gulp-bump": "^2.8.0",
@@ -38,7 +27,7 @@
 		"gulp-sourcemaps": "^2.6.1",
 		"gulp-typescript": "^3.2.2",
 		"merge-stream": "^1.0.1",
-		"typescript": "^2.5.3"
+		"typescript": "^2.7.1"
 	},
 	"dependencies": {
 		"htmlparser2": "^3.9.2"

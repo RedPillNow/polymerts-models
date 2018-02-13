@@ -1,5 +1,3 @@
-import * as Utils from '../lib/utils';
-
 export class HtmlComment {
 	private _comment: string;
 

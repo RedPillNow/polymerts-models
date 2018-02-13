@@ -8,7 +8,7 @@ const color = require('gulp-color');
  * @param {string} subpath
  */
 const path = require('path');
-const DIST = 'dist';
+const DIST = '';
 const dist = (subpath) => {
 	return !subpath ? DIST : path.join(DIST, subpath);
 }
@@ -35,7 +35,7 @@ gulp.task('clean', () => {
  * Copy all files/folders except .js and .ts files from src to dist
  */
 gulp.task('copy', ['clean'], () => {
-	return gulp.src(['src/**/*', '!src/*.{js,ts}', '!src/**/*.{js,ts}', '!src/test/'])
+	return gulp.src(['src/**/*', '!src/*.ts', '!src/**/*.ts', '!src/test/'])
 		.pipe(gulp.dest(dist()));
 });
 

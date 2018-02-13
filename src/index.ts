@@ -1,24 +1,11 @@
-import {Behavior as PolymerBehavior} from './models/behavior';
-import {Comment as PolymerComment} from './models/comment';
-import {Component as PolymerComponent} from './models/component';
-import {ComputedProperty as PolymerComputedProperty} from './models/computed';
-import {Function as PolymerFunction} from './models/function';
-import {HtmlComment as PolymerHtmlComment} from './models/html-comment';
-import {Listener as PolymerListener} from './models/listener';
-import {Observer as PolymerObserver} from './models/observer';
-import {Property as PolymerProperty} from './models/property';
-import * as Utils from './lib/utils';
+export {Behavior} from './models/behavior';
+export {Comment} from './models/comment';
+export {Component} from './models/component';
+export {ComputedProperty} from './models/computed';
+export {Function } from './models/function';
+export {HtmlComment} from './models/html-comment';
+export {Listener} from './models/listener';
+export {Observer} from './models/observer';
+export {Property} from './models/property';
+// export * as Utils from './lib/utils';
 
-export class Models {
-	Behavior = PolymerBehavior;
-	Comment = PolymerComment;
-	Component = PolymerComponent;
-	ComputedProperty = PolymerComputedProperty;
-	Function = PolymerFunction;
-	HtmlComment = PolymerHtmlComment;
-	Listener = PolymerListener;
-	Observer = PolymerObserver;
-	Property = PolymerProperty;
-}
-
-module.exports.Models = Models;

@@ -1,4 +1,4 @@
-import {Behavior} from './models/behavior';
+import {Behavior as PolymerBehavior} from './models/behavior';
 import {Comment} from './models/comment';
 import {Component} from './models/component';
 import {ComputedProperty} from './models/computed';
@@ -9,7 +9,7 @@ import {Observer} from './models/observer';
 import {Property} from './models/property';
 import * as Utils from './lib/utils';
 
-module.exports.Behavior = Behavior;
+export const Behavior = PolymerBehavior;
 module.exports.Comment = Comment;
 module.exports.Component = Component;
 module.exports.ComputedProperty = ComputedProperty;

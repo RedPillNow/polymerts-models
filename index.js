@@ -9,6 +9,7 @@ var html_comment_1 = require("./models/html-comment");
 var listener_1 = require("./models/listener");
 var observer_1 = require("./models/observer");
 var property_1 = require("./models/property");
+var Utils = require("./lib/utils");
 module.exports.Behavior = behavior_1.Behavior;
 module.exports.Comment = comment_1.Comment;
 module.exports.Component = component_1.Component;
@@ -18,5 +19,6 @@ module.exports.HtmlComment = html_comment_1.HtmlComment;
 module.exports.Listener = listener_1.Listener;
 module.exports.Observer = observer_1.Observer;
 module.exports.Property = property_1.Property;
+module.exports.Utils = Utils;
 
 //# sourceMappingURL=index.js.map

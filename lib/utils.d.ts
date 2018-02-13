@@ -1,0 +1,32 @@
+import * as ts from 'typescript';
+import { Component } from '../models/component';
+import { Listener } from '../models/listener';
+import { Function } from '../models/function';
+import { Observer } from '../models/observer';
+import { ComputedProperty } from '../models/computed';
+export declare class PathInfo {
+    fileName: string;
+    dirName: string;
+    docFileName: string;
+    fullDocFilePath: string;
+    htmlFileName: string;
+    fullHtmlFilePath: string;
+}
+export declare function trimRight(str: any): string;
+export declare function trimTabs(str: any): string;
+export declare function trimAllWhitespace(str: any): string;
+export declare function getObjectLiteralString(objExp: ts.ObjectLiteralExpression): any;
+export declare function getStringFromObject(obj: any): string;
+export declare function getObjectFromString(objectStr: string): any;
+export declare function getArrayFromString(arrayStr: string): any;
+export declare function getPathInfo(fileName: string, docPath: string): PathInfo;
+export declare function getStartLineNumber(node: ts.Node): number;
+export declare function getEndLineNumber(node: ts.Node): number;
+export declare function capitalizeFirstLetter(str: string): string;
+export declare function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
+export declare function getMethodFromListener(listener: Listener): Function;
+export declare function getMethodFromComputed(computed: ComputedProperty): Function;
+export declare function getMethodFromObserver(observer: Observer): Function;
+export declare function isComputedProperty(node: ts.MethodDeclaration): boolean;
+export declare function isListener(node: ts.MethodDeclaration): boolean;
+export declare function isObserver(node: ts.MethodDeclaration): boolean;

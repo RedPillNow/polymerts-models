@@ -9,13 +9,16 @@ import {Observer as PolymerObserver} from './models/observer';
 import {Property as PolymerProperty} from './models/property';
 import * as Utils from './lib/utils';
 
-export const Behavior = PolymerBehavior;
-export const Comment = PolymerComment;
-export const Component = PolymerComponent;
-export const ComputedProperty = PolymerComputedProperty;
-export const Function = PolymerFunction;
-export const HtmlComment = PolymerHtmlComment;
-export const Listener = PolymerListener;
-export const Observer = PolymerObserver;
-export const Property = PolymerProperty;
-// export const Utils = Utils;
+export class Models {
+	Behavior = PolymerBehavior;
+	Comment = PolymerComment;
+	Component = PolymerComponent;
+	ComputedProperty = PolymerComputedProperty;
+	Function = PolymerFunction;
+	HtmlComment = PolymerHtmlComment;
+	Listener = PolymerListener;
+	Observer = PolymerObserver;
+	Property = PolymerProperty;
+}
+
+module.exports.Models = Models;

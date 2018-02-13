@@ -7,12 +7,14 @@ import { HtmlComment as PolymerHtmlComment } from './models/html-comment';
 import { Listener as PolymerListener } from './models/listener';
 import { Observer as PolymerObserver } from './models/observer';
 import { Property as PolymerProperty } from './models/property';
-export declare const Behavior: typeof PolymerBehavior;
-export declare const Comment: typeof PolymerComment;
-export declare const Component: typeof PolymerComponent;
-export declare const ComputedProperty: typeof PolymerComputedProperty;
-export declare const Function: typeof PolymerFunction;
-export declare const HtmlComment: typeof PolymerHtmlComment;
-export declare const Listener: typeof PolymerListener;
-export declare const Observer: typeof PolymerObserver;
-export declare const Property: typeof PolymerProperty;
+export declare class Models {
+    Behavior: typeof PolymerBehavior;
+    Comment: typeof PolymerComment;
+    Component: typeof PolymerComponent;
+    ComputedProperty: typeof PolymerComputedProperty;
+    Function: typeof PolymerFunction;
+    HtmlComment: typeof PolymerHtmlComment;
+    Listener: typeof PolymerListener;
+    Observer: typeof PolymerObserver;
+    Property: typeof PolymerProperty;
+}

@@ -7,7 +7,7 @@ import { Behavior } from './behavior';
 import { Listener } from './listener';
 import { HtmlComment } from './html-comment';
 
-class Component extends ProgramPart {
+export class Component extends ProgramPart {
 	private _behaviors: Behavior[];
 	private _className: string;
 	private _htmlFilePath: string;
@@ -196,5 +196,3 @@ class Component extends ProgramPart {
 		return observersStr;
 	}
 }
-
-export {Component};

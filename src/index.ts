@@ -206,7 +206,7 @@ export module RedPill {
 			return componentStr;
 		}
 
-		private _writeHtmlComment(): string {
+		protected _writeHtmlComment(): string {
 			let comment = null;
 			let parser: htmlParser.Parser = new htmlParser.Parser({
 				oncomment: (data) => {
@@ -222,7 +222,7 @@ export module RedPill {
 			return comment ? comment.toMarkup() : '';
 		}
 
-		private _writeHead(): string {
+		protected _writeHead(): string {
 			let headStr = '<dom-module id="' + this.name + '">\n';
 			headStr += '\t<template>\n';
 			headStr += '\t\t<style></style>\n';
@@ -233,7 +233,7 @@ export module RedPill {
 			return headStr;
 		}
 
-		private _writeFoot(): string {
+		protected _writeFoot(): string {
 			let footStr = '\n\t});\n';
 			footStr += '})();\n';
 			footStr += '\t\t</script>\n';
@@ -242,7 +242,7 @@ export module RedPill {
 			return footStr;
 		}
 
-		private _writeProperties(): string {
+		protected _writeProperties(): string {
 			let propertiesStr = '\n\t\tproperties: {';
 			for (let i = 0; i < this.properties.length; i++) {
 				let prop: Property = this.properties[i];
@@ -253,7 +253,7 @@ export module RedPill {
 			return propertiesStr;
 		}
 
-		private _writeBehaviors(): string {
+		protected _writeBehaviors(): string {
 			let behaviorsStr = '\n\t\tbehaviors: [\n';
 			for (let i = 0; i < this.behaviors.length; i++) {
 				let behavior = this.behaviors[i];
@@ -264,7 +264,7 @@ export module RedPill {
 			return behaviorsStr;
 		}
 
-		private _writeListeners(): string {
+		protected _writeListeners(): string {
 			let listenersStr = '\n\t\tlisteners: {\n';
 			for (let i = 0; i < this.listeners.length; i++) {
 				let listener = this.listeners[i];
@@ -275,7 +275,7 @@ export module RedPill {
 			return listenersStr;
 		}
 
-		private _writeMethods(): string {
+		protected _writeMethods(): string {
 			let methodsStr = '';
 			for (let i = 0; i < this.methods.length; i++) {
 				let method = this.methods[i];
@@ -285,7 +285,7 @@ export module RedPill {
 			return methodsStr;
 		}
 
-		private _writeObservers(): string {
+		protected _writeObservers(): string {
 			let observersStr = '\n\t\tobservers: [\n';
 			for (let i = 0; i < this.observers.length; i++) {
 				let observer = this.observers[i];
@@ -1040,7 +1040,7 @@ export module RedPill {
 	 */
 	export function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean {
 		let isComponent = false;
-		if (ts.isClassDeclaration(parentNode)) {
+		if (ts.isClassDeclaration(parentNode) && component) {
 			let classDecl = <ts.ClassDeclaration>parentNode;
 			if (classDecl.name.getText() === component.className) {
 				isComponent = true;

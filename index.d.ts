@@ -38,14 +38,14 @@ export declare module RedPill {
         observers: Observer[];
         properties: Property[];
         toMarkup(): string;
-        private _writeHtmlComment();
-        private _writeHead();
-        private _writeFoot();
-        private _writeProperties();
-        private _writeBehaviors();
-        private _writeListeners();
-        private _writeMethods();
-        private _writeObservers();
+        protected _writeHtmlComment(): string;
+        protected _writeHead(): string;
+        protected _writeFoot(): string;
+        protected _writeProperties(): string;
+        protected _writeBehaviors(): string;
+        protected _writeListeners(): string;
+        protected _writeMethods(): string;
+        protected _writeObservers(): string;
     }
     enum ProgramType {
         Property = "PROPERTY",

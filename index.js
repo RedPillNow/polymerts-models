@@ -1031,7 +1031,7 @@ var RedPill;
     RedPill.capitalizeFirstLetter = capitalizeFirstLetter;
     function isNodeComponentChild(parentNode, component) {
         var isComponent = false;
-        if (ts.isClassDeclaration(parentNode)) {
+        if (ts.isClassDeclaration(parentNode) && component) {
             var classDecl = parentNode;
             if (classDecl.name.getText() === component.className) {
                 isComponent = true;

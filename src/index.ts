@@ -3,6 +3,8 @@ import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as Utils from './lib/utils';
 
+export module RedPill {
+
 export abstract class ProgramPart {
 	private _comment: Comment;
 	private _endLineNum: number;
@@ -825,4 +827,6 @@ export class ComputedProperty extends Property {
 		propStr += this._getNewParams();
 		return propStr;
 	}
+}
+
 }

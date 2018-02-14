@@ -19,22 +19,18 @@ export declare module RedPill {
     class Component extends ProgramPart {
         private _behaviors;
         private _className;
-        private _filePath;
         private _htmlFilePath;
         private _listeners;
         private _methods;
         private _name;
-        private _namespace;
         private _observers;
         private _properties;
         behaviors: Behavior[];
         className: string;
-        filePath: string;
         htmlFilePath: string;
         listeners: Listener[];
         methods: any[];
         name: string;
-        namespace: string;
         observers: Observer[];
         properties: Property[];
         toMarkup(): string;
@@ -139,32 +135,6 @@ export declare module RedPill {
         private _getNewParams();
         toMarkup(): string;
     }
-    class PathInfo {
-        fileName: string;
-        dirName: string;
-        docFileName: string;
-        fullDocFilePath: string;
-        htmlFileName: string;
-        fullHtmlFilePath: string;
-    }
-    function trimRight(str: any): string;
-    function trimTabs(str: any): string;
-    function trimAllWhitespace(str: any): string;
-    function getObjectLiteralString(objExp: ts.ObjectLiteralExpression): any;
-    function getStringFromObject(obj: any): string;
-    function getObjectFromString(objectStr: string): any;
-    function getArrayFromString(arrayStr: string): any;
-    function getPathInfo(fileName: string, docPath: string): PathInfo;
-    function getStartLineNumber(node: ts.Node): number;
-    function getEndLineNumber(node: ts.Node): number;
-    function capitalizeFirstLetter(str: string): string;
-    function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
-    function getMethodFromListener(listener: Listener): Function;
-    function getMethodFromComputed(computed: ComputedProperty): Function;
-    function getMethodFromObserver(observer: Observer): Function;
-    function isComputedProperty(node: ts.MethodDeclaration): boolean;
-    function isListener(node: ts.MethodDeclaration): boolean;
-    function isObserver(node: ts.MethodDeclaration): boolean;
 }
 declare const _default: {
     RedPill: typeof RedPill;

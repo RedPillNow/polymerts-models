@@ -10,7 +10,7 @@ export module RedPill {
 		private _startLineNum: number;
 		private _tsNode: ts.Node;
 
-		abstract toMarkup(): string;
+		abstract toDocOnlyMarkup(): string;
 
 		public get comment() {
 			if (this._comment === undefined && this.tsNode) {
@@ -81,8 +81,8 @@ export module RedPill {
 			this._name = name;
 		}
 
-		toMarkup() {
-			let comment = this.comment ? '\n' + this.comment.toMarkup() : '';
+		toDocOnlyMarkup() {
+			let comment = this.comment ? '\n' + this.comment.toDocOnlyMarkup() : '';
 			let behaviorStr = comment;
 			behaviorStr += this.name;
 			return behaviorStr;
@@ -92,6 +92,7 @@ export module RedPill {
 	export class Component extends ProgramPart {
 		private _behaviors: Behavior[];
 		private _className: string;
+		private _extendsClass: string;
 		private _filePath: string;
 		private _htmlFilePath: string;
 		private _listeners: Listener[];
@@ -115,6 +116,14 @@ export module RedPill {
 
 		set className(className) {
 			this._className = className;
+		}
+
+		get extendsClass() {
+			return this._extendsClass;
+		}
+
+		set extendsClass(extendsClass) {
+			this._extendsClass = extendsClass;
 		}
 
 		get filePath() {
@@ -181,32 +190,32 @@ export module RedPill {
 			this._properties = properties;
 		}
 
-		toMarkup() {
-			let componentStr = this._writeHtmlComment();
-			componentStr += this._writeHead();
+		toDocOnlyMarkup() {
+			let componentStr = this._writeDocHtmlComment();
+			componentStr += this._writeDocHead();
 			if (this.behaviors && this.behaviors.length > 0) {
-				componentStr += this._writeBehaviors();
+				componentStr += this._writeDocBehaviors();
 			}
 			if (this.properties && this.properties.length > 0) {
-				componentStr += this._writeProperties();
+				componentStr += this._writeDocProperties();
 			}
 			if (this.observers && this.observers.length > 0) {
-				componentStr += this._writeObservers();
+				componentStr += this._writeDocObservers();
 			}
 			if (this.listeners && this.listeners.length > 0) {
-				componentStr += this._writeListeners();
+				componentStr += this._writeDocListeners();
 			}
 			if (this.observers && this.observers.length > 0) {
 
 			}
 			if (this.methods && this.methods.length > 0) {
-				componentStr += this._writeMethods();
+				componentStr += this._writeDocMethods();
 			}
-			componentStr += this._writeFoot();
+			componentStr += this._writeDocFoot();
 			return componentStr;
 		}
 
-		protected _writeHtmlComment(): string {
+		protected _writeDocHtmlComment(): string {
 			let comment = null;
 			let parser: htmlParser.Parser = new htmlParser.Parser({
 				oncomment: (data) => {
@@ -219,10 +228,10 @@ export module RedPill {
 			}, { decodeEntities: true });
 			parser.write(fs.readFileSync(this.htmlFilePath));
 			parser.end();
-			return comment ? comment.toMarkup() : '';
+			return comment ? comment.toDocOnlyMarkup() : '';
 		}
 
-		protected _writeHead(): string {
+		protected _writeDocHead(): string {
 			let headStr = '<dom-module id="' + this.name + '">\n';
 			headStr += '\t<template>\n';
 			headStr += '\t\t<style></style>\n';
@@ -233,7 +242,7 @@ export module RedPill {
 			return headStr;
 		}
 
-		protected _writeFoot(): string {
+		protected _writeDocFoot(): string {
 			let footStr = '\n\t});\n';
 			footStr += '})();\n';
 			footStr += '\t\t</script>\n';
@@ -242,54 +251,54 @@ export module RedPill {
 			return footStr;
 		}
 
-		protected _writeProperties(): string {
+		protected _writeDocProperties(): string {
 			let propertiesStr = '\n\t\tproperties: {';
 			for (let i = 0; i < this.properties.length; i++) {
 				let prop: Property = this.properties[i];
-				propertiesStr += prop.toMarkup();
+				propertiesStr += prop.toDocOnlyMarkup();
 				propertiesStr += (i + 1) < this.properties.length ? ',' : '';
 			}
 			propertiesStr += '\n\t\t},';
 			return propertiesStr;
 		}
 
-		protected _writeBehaviors(): string {
+		protected _writeDocBehaviors(): string {
 			let behaviorsStr = '\n\t\tbehaviors: [\n';
 			for (let i = 0; i < this.behaviors.length; i++) {
 				let behavior = this.behaviors[i];
-				behaviorsStr += '\t\t\t' + behavior.toMarkup();
+				behaviorsStr += '\t\t\t' + behavior.toDocOnlyMarkup();
 				behaviorsStr += (i + 1) < this.behaviors.length ? ',\n' : '';
 			}
 			behaviorsStr += '\n\t\t],'
 			return behaviorsStr;
 		}
 
-		protected _writeListeners(): string {
+		protected _writeDocListeners(): string {
 			let listenersStr = '\n\t\tlisteners: {\n';
 			for (let i = 0; i < this.listeners.length; i++) {
 				let listener = this.listeners[i];
-				listenersStr += listener.toMarkup();
+				listenersStr += listener.toDocOnlyMarkup();
 				listenersStr += (i + 1) < this.listeners.length ? ',\n' : '';
 			}
 			listenersStr += '\n\t\t},';
 			return listenersStr;
 		}
 
-		protected _writeMethods(): string {
+		protected _writeDocMethods(): string {
 			let methodsStr = '';
 			for (let i = 0; i < this.methods.length; i++) {
 				let method = this.methods[i];
-				methodsStr += '\n' + method.toMarkup();
+				methodsStr += '\n' + method.toDocOnlyMarkup();
 				methodsStr += (i + 1) < this.methods.length ? ',' : '';
 			}
 			return methodsStr;
 		}
 
-		protected _writeObservers(): string {
+		protected _writeDocObservers(): string {
 			let observersStr = '\n\t\tobservers: [\n';
 			for (let i = 0; i < this.observers.length; i++) {
 				let observer = this.observers[i];
-				observersStr += observer.toMarkup();
+				observersStr += observer.toDocOnlyMarkup();
 				observersStr += (i + 1) < this.observers.length ? ',\n' : '';
 			}
 			observersStr += '\n\t\t\],';
@@ -390,7 +399,7 @@ export module RedPill {
 			return indentation;
 		}
 
-		toMarkup() {
+		toDocOnlyMarkup() {
 			let markup = this._getIndent() + '/**\n';
 			markup += this._getIndent() + ' * ';
 			markup += this.commentText ? this.commentText.replace(/\n/g, '\n' + this._getIndent() + ' * ') + '\n' : '\n';
@@ -452,8 +461,8 @@ export module RedPill {
 			this._signature = signature;
 		}
 
-		toMarkup() {
-			let comment = this.comment ? this.comment.toMarkup() : '';
+		toDocOnlyMarkup() {
+			let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
 			let functionStr = comment;
 			functionStr += '\t\t' + this.signature;
 			return functionStr;
@@ -471,7 +480,7 @@ export module RedPill {
 			this._comment = comment;
 		}
 
-		toMarkup(): string {
+		toDocOnlyMarkup(): string {
 			let commentStr = null;
 			if (this.comment) {
 				commentStr = '<!--\n';
@@ -529,8 +538,8 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 
-		toMarkup() {
-			let comment = this.comment ? this.comment.toMarkup() : '';
+		toDocOnlyMarkup() {
+			let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
 			let listenerStr = comment;
 			let eventName = this.eventDeclaration ? this.eventDeclaration.replace(/['"]/g, '') : '';
 			listenerStr += '\t\t\t\'' + eventName + '\'';
@@ -560,8 +569,8 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		// TODO Fix this
-		toMarkup() {
-			let comment = this.comment ? this.comment.toMarkup() : '';
+		toDocOnlyMarkup() {
+			let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
 			let observerStr = comment;
 			observerStr += '\t\t\t\'' + this.methodName + '(';
 			for (let i = 0; i < this.properties.length; i++) {
@@ -794,9 +803,9 @@ export module RedPill {
 		 * @returns {string}
 		 * @todo If there isn't a comment, we should have everything we need to create one
 		 */
-		toMarkup(): string {
+		toDocOnlyMarkup(): string {
 			let nameParts = this.name.split(':');
-			let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toMarkup() : '\n' + this.derivedComment.toMarkup();
+			let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
 			let propStr = comment;
 			propStr += '\t\t\t' + nameParts[0];
 			propStr += ': ';
@@ -835,9 +844,9 @@ export module RedPill {
 			return newParamStr;
 		}
 
-		toMarkup() {
+		toDocOnlyMarkup() {
 			let nameParts = this.name.split(':');
-			let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toMarkup() : '\n' + this.derivedComment.toMarkup();
+			let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
 			let propStr = comment;
 			propStr += '\t\t\t' + nameParts[0];
 			propStr += ': ';

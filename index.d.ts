@@ -3,33 +3,41 @@ export declare module RedPill {
     abstract class ProgramPart {
         private _comment;
         private _endLineNum;
+        private _filePath;
         private _startLineNum;
         private _tsNode;
-        abstract toMarkup(): string;
+        abstract toDocOnlyMarkup(): string;
         comment: Comment;
         endLineNum: number;
+        filePath: string;
         startLineNum: number;
         tsNode: ts.Node;
+        parseChildren(returnType: ts.SyntaxKind, hasDecorators: boolean): any[];
     }
-    class Behavior extends ProgramPart {
+    class IncludedBehavior extends ProgramPart {
         private _name;
         name: string;
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
         private _behaviors;
         private _className;
-        private _filePath;
+        private _computedProperties;
+        private _cssFilePath;
+        private _extendsClass;
         private _htmlFilePath;
         private _listeners;
         private _methods;
         private _name;
         private _namespace;
-        private _observers;
         private _properties;
-        behaviors: Behavior[];
+        private _observers;
+        constructor(node?: ts.ClassDeclaration);
+        behaviors: IncludedBehavior[];
         className: string;
-        filePath: string;
+        computedProperties: ComputedProperty[];
+        cssFilePath: string;
+        extendsClass: string;
         htmlFilePath: string;
         listeners: Listener[];
         methods: any[];
@@ -37,15 +45,15 @@ export declare module RedPill {
         namespace: string;
         observers: Observer[];
         properties: Property[];
-        toMarkup(): string;
-        protected _writeHtmlComment(): string;
-        protected _writeHead(): string;
-        protected _writeFoot(): string;
-        protected _writeProperties(): string;
-        protected _writeBehaviors(): string;
-        protected _writeListeners(): string;
-        protected _writeMethods(): string;
-        protected _writeObservers(): string;
+        toDocOnlyMarkup(): string;
+        protected _writeDocHtmlComment(): string;
+        protected _writeDocHead(): string;
+        protected _writeDocFoot(): string;
+        protected _writeDocProperties(): string;
+        protected _writeDocBehaviors(): string;
+        protected _writeDocListeners(): string;
+        protected _writeDocMethods(): string;
+        protected _writeDocObservers(): string;
     }
     enum ProgramType {
         Property = "PROPERTY",
@@ -70,23 +78,24 @@ export declare module RedPill {
         startLineNum: number;
         tags: string[];
         private _getIndent();
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class Function extends ProgramPart {
         private _methodName;
         private _parameters;
         private _returnType;
         private _signature;
+        constructor(node?: ts.Node);
         methodName: string;
         parameters: string[];
         returnType: string;
         signature: string;
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class HtmlComment {
         private _comment;
         comment: string;
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class Listener extends ProgramPart {
         private _elementId;
@@ -94,29 +103,35 @@ export declare module RedPill {
         private _eventDeclaration;
         private _isExpression;
         private _methodName;
+        constructor(node?: ts.Node);
         elementId: string;
         eventDeclaration: string;
         eventName: string;
         isExpression: boolean;
         methodName: any;
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class Observer extends ProgramPart {
         private _properties;
         private _methodName;
-        properties: string[];
+        private _isComplex;
+        constructor(node?: ts.Node);
+        isComplex: boolean;
         methodName: any;
-        toMarkup(): string;
+        properties: string[];
+        toDocOnlyMarkup(): string;
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;
         private _containsValueFunction;
         private _containsValueObjectDeclaration;
         private _name;
-        private _params;
+        protected _params: string;
         private _type;
         private _valueArrayParams;
+        private _valueFunction;
         private _valueObjectParams;
+        constructor(node?: ts.Node);
         readonly derivedComment: Comment;
         containsValueArrayLiteral: boolean;
         containsValueFunction: boolean;
@@ -125,19 +140,22 @@ export declare module RedPill {
         params: string;
         type: string;
         valueArrayParams: any;
+        valueFunction: Function;
         valueObjectParams: any;
         private _parseParams();
         private _isPartOfValue(part);
         private _parseValueArray();
         private _parseValueObject();
         private _parseValueFunction(valueFunctionPart);
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class ComputedProperty extends Property {
+        private _derivedMethodName;
         private _methodName;
-        methodName: any;
+        derivedMethodName: string;
+        methodName: string;
         private _getNewParams();
-        toMarkup(): string;
+        toDocOnlyMarkup(): string;
     }
     class PathInfo {
         fileName: string;

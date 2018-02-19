@@ -1,22 +1,38 @@
 import * as fs from 'fs';
-import * as htmlParser from 'htmlparser2';
 import * as path from 'path';
+import * as htmlParser from 'htmlparser2';
 import * as ts from 'typescript';
 
 export module RedPill {
+	/**
+	 * Top level abstract class representing a component or part of a component. It contains
+	 * basic properties, getters, setters and abstract class definition
+	 * @export
+	 * @abstract
+	 * @class ProgramPart
+	 */
 	export abstract class ProgramPart {
 		private _comment: Comment;
 		private _endLineNum: number;
+		private _filePath: string;
 		private _startLineNum: number;
 		private _tsNode: ts.Node;
-
+		/**
+		 * This is mainly for generating iron-component-page documentation for a
+		 * PolymerTS element which depends on Polymer 1.x
+		 * @abstract
+		 * @returns {string}
+		 */
 		abstract toDocOnlyMarkup(): string;
-
-		public get comment() {
+		/**
+		 * A comment object derived during the parsing
+		 * @type {Comment}
+		 */
+		public get comment(): Comment {
 			if (this._comment === undefined && this.tsNode) {
 				let tsNodeAny = (<any>this.tsNode);
 				if (tsNodeAny.jsDoc && tsNodeAny.jsDoc.length > 0) {
-					let comm:Comment = new Comment();
+					let comm: Comment = new Comment();
 					comm.commentText = tsNodeAny.jsDoc[0].comment;
 					if (tsNodeAny.jsDoc[0].tags && tsNodeAny.jsDoc[0].tags.length > 0) {
 						let tags = [];
@@ -44,36 +60,96 @@ export module RedPill {
 		public set comment(comment) {
 			this._comment = comment;
 		}
-
-		get endLineNum() {
+		/**
+		 * The ending line number for a particular typescript node
+		 * @type {number}
+		 */
+		get endLineNum(): number {
+			if (!this._endLineNum && this.tsNode) {
+				this._endLineNum = getEndLineNumber(this.tsNode);
+			}
 			return this._endLineNum;
 		}
 
 		set endLineNum(endLineNum) {
 			this._endLineNum = endLineNum;
 		}
+		/**
+		 * The file path where this TypeScript node was encountered
+		 * @type {string}
+		 */
+		get filePath(): string {
+			if (!this._filePath && this.tsNode) {
+				this._filePath = this.tsNode.getSourceFile().fileName;
+			}
+			return this._filePath;
+		}
 
-		get startLineNum() {
+		set filePath(filePath) {
+			this._filePath = filePath;
+		}
+		/**
+		 * The starting line number
+		 * @type {number}
+		 */
+		get startLineNum(): number {
+			if ((!this._startLineNum || this._startLineNum === 0) && this.tsNode) {
+				this._startLineNum = getStartLineNumber(this.tsNode);
+			}
 			return this._startLineNum;
 		}
 
 		set startLineNum(startLineNum) {
 			this._startLineNum = startLineNum;
 		}
-
-		get tsNode() {
+		/**
+		 * The node for this element
+		 * @type {TypeScript.Node}
+		 */
+		get tsNode(): ts.Node {
 			return this._tsNode;
 		}
 
 		set tsNode(tsNode) {
 			this._tsNode = tsNode;
 		}
+		/**
+		 * Parse the children of tsNode. Look for the returnType and return an array
+		 * of nodes that match returnType. If hasDecorators is true, then only include
+		 * nodes with a SyntaxKind of returnType if they have decorators
+		 * @param {ts.SyntaxKind} returnType
+		 * @param {boolean} hasDecorators
+		 * @returns {any[]}
+		 */
+		parseChildren(returnType: ts.SyntaxKind, hasDecorators: boolean): any[] {
+			let kidsOfType = [];
+			let parseKids = (node: ts.Node) => {
+				switch (node.kind) {
+					case returnType:
+						if (hasDecorators && node.decorators && node.decorators.length > 0) {
+							kidsOfType.push(node);
+						} else if (!hasDecorators) {
+							kidsOfType.push(node);
+						}
+						break;
+				};
+				ts.forEachChild(node, parseKids);
+			};
+			parseKids(this.tsNode);
+			return kidsOfType;
+		}
 	}
-
-	export class Behavior extends ProgramPart {
+	/**
+	 * This is a class representing a Behavior defined as a decorator to a component
+	 * with @behavior
+	 * @export
+	 * @class IncludedBehavior
+	 * @extends {ProgramPart}
+	 */
+	export class IncludedBehavior extends ProgramPart {
 		private _name: string;
 
-		get name() {
+		get name(): string {
 			return this._name;
 		}
 
@@ -88,101 +164,257 @@ export module RedPill {
 			return behaviorStr;
 		}
 	}
-
+	/**
+	 * Model for a custom component or element defined with @component
+	 * @export
+	 * @class Component
+	 * @extends {ProgramPart}
+	 */
 	export class Component extends ProgramPart {
-		private _behaviors: Behavior[];
+		private _behaviors: IncludedBehavior[];
 		private _className: string;
+		private _computedProperties: ComputedProperty[];
+		private _cssFilePath: string;
 		private _extendsClass: string;
-		private _filePath: string;
 		private _htmlFilePath: string;
 		private _listeners: Listener[];
 		private _methods: any[];
 		private _name: string;
 		private _namespace: string;
-		private _observers: Observer[];
 		private _properties: Property[];
+		private _observers: Observer[];
 
-		get behaviors() {
+		constructor(node?: ts.ClassDeclaration) {
+			super();
+			this.tsNode = node;
+		}
+		/**
+		 * The behaviors this class depends upon
+		 * @type {IncludedBehavior[]}
+		 */
+		get behaviors(): IncludedBehavior[] {
+			if ((!this._behaviors || this._behaviors.length === 0) && this.tsNode) {
+				let behaviors = [];
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let behaviorMatch = /\s*(?:behavior)\s*\((...*)\)/.exec(exp.getText());
+					if (behaviorMatch && behaviorMatch.length > 0) {
+						let behave: IncludedBehavior = new IncludedBehavior();
+						behave.tsNode = decorator;
+						behave.name = behaviorMatch[1];
+						behaviors.push(behave);
+					}
+				});
+				this._behaviors = behaviors;
+			}
 			return this._behaviors || [];
 		}
 
 		set behaviors(behaviors) {
 			this._behaviors = behaviors;
 		}
-
-		get className() {
+		/**
+		 * The name of this class
+		 * @type {string}
+		 */
+		get className(): string {
+			if (!this._className && this.tsNode) {
+				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
+				this._className = clazz.name.getText();
+			}
 			return this._className;
 		}
 
 		set className(className) {
 			this._className = className;
 		}
+		/**
+		 * The computed properties this class defines
+		 * @type {ComputedProperty[]}
+		 */
+		get computedProperties(): ComputedProperty[] {
+			if (!this._computedProperties && this.tsNode) {
+				let computedDeclarations = this.parseChildren(ts.SyntaxKind.MethodDeclaration, true);
+				let computedProps = [];
+				for (let i = 0; i < computedDeclarations.length; i++) {
+					let computedPropNode = computedDeclarations[i];
+					if (isComputedProperty(computedPropNode)) {
+						let computedProperty = new ComputedProperty(computedPropNode);
+						computedProps.push(computedProperty);
+					}
+				}
+				this._computedProperties = computedProps;
+			}
+			return this._computedProperties || [];
+		}
 
-		get extendsClass() {
+		set computedProperties(computedProperties) {
+			this._computedProperties = computedProperties;
+		}
+		/**
+		 * The path to an external CSS file. This property is populated
+		 * even if there isn't an external CSS file
+		 * @type {string}
+		 */
+		get cssFilePath(): string {
+			if (!this._cssFilePath && this.filePath) {
+				let baseFilePath = path.basename(this.filePath, '.ts');
+				let dirName = path.dirname(this.filePath);
+				this._cssFilePath = path.join(dirName, baseFilePath + '.css');
+			}
+			return this._cssFilePath;
+		}
+
+		set cssFilePath(cssFilePath) {
+			this._cssFilePath = cssFilePath;
+		}
+		/**
+		 * The class the component class extends
+		 * @type {string}
+		 */
+		get extendsClass(): string {
 			return this._extendsClass;
 		}
 
 		set extendsClass(extendsClass) {
 			this._extendsClass = extendsClass;
 		}
-
-		get filePath() {
-			return this._filePath;
-		}
-
-		set filePath(filePath) {
-			this._filePath = filePath;
-		}
-
-		get htmlFilePath() {
+		/**
+		 * The path to the accompanying HTML file.
+		 * @type {string}
+		 */
+		get htmlFilePath(): string {
+			if (!this._htmlFilePath && this.filePath) {
+				let baseFileName = path.basename(this.filePath, '.ts');
+				let dirName = path.dirname(this.filePath);
+				this._htmlFilePath = path.join(dirName, baseFileName + '.html');
+			}
 			return this._htmlFilePath;
 		}
 
 		set htmlFilePath(htmlFilePath) {
 			this._htmlFilePath = htmlFilePath;
 		}
-
-		get listeners() {
+		/**
+		 * The listeners this component has defined
+		 * @type {Listener[]}
+		 */
+		get listeners(): Listener[] {
+			if (!this._listeners && this.tsNode) {
+				let listenerDeclarations = this.parseChildren(ts.SyntaxKind.MethodDeclaration, true);
+				let listeners = [];
+				for (let i = 0; i < listenerDeclarations.length; i++) {
+					let listenerNode = listenerDeclarations[i];
+					if (isListener(listenerNode)) {
+						let listener = new Listener(listenerNode);
+						listeners.push(listener);
+					}
+				}
+				this._listeners = listeners;
+			}
 			return this._listeners || [];
 		}
 
 		set listeners(listeners) {
 			this._listeners = listeners;
 		}
-
-		get methods() {
+		/**
+		 * The methods for this class. It does not include methods for
+		 * @computed, @listener or @observer declarations
+		 * @type {Function[]}
+		 */
+		get methods(): Function[] {
+			if (!this._methods && this.tsNode) {
+				let methodDeclarations = this.parseChildren(ts.SyntaxKind.MethodDeclaration, false);
+				let methods = [];
+				for (let i = 0; i < methodDeclarations.length; i++) {
+					let methodNode = methodDeclarations[i];
+					if (!isObserver(methodNode) && !isListener(methodNode) && !isComputedProperty(methodNode)) {
+						let func = new Function(methodNode);
+						methods.push(func);
+					}
+				}
+				this._methods = methods;
+			}
 			return this._methods || [];
 		}
 
 		set methods(methods) {
 			this._methods = methods;
 		}
-
-		get name() {
+		/**
+		 * The tag name this component defines
+		 * @type {string}
+		 */
+		get name(): string {
+			if (!this._name && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(exp.getText());
+					if (componentMatch && componentMatch.length > 0) {
+						this._name = componentMatch[1];
+					}
+				});
+			}
 			return this._name;
 		}
 
 		set name(name) {
 			this._name = name;
 		}
-
-		get namespace() {
+		/**
+		 * The namespace this component class is defined in
+		 * @type {string}
+		 */
+		get namespace(): string {
 			return this._namespace;
 		}
 
 		set namespace(namespace) {
 			this._namespace = namespace;
 		}
-
-		get observers() {
+		/**
+		 * The observers which are defined using @observe
+		 * @type {Observer[]}
+		 */
+		get observers(): Observer[] {
+			if (!this._observers && this.tsNode) {
+				let obsDeclarations = this.parseChildren(ts.SyntaxKind.MethodDeclaration, true);
+				let obs = [];
+				for (let i = 0; i < obsDeclarations.length; i++) {
+					let obsNode = obsDeclarations[i];
+					if (isObserver(obsNode)) {
+						let observer = new Observer(obsNode);
+						obs.push(observer);
+					}
+				}
+				this._observers = obs;
+			}
 			return this._observers || [];
 		}
 
 		set observers(observers) {
 			this._observers = observers;
 		}
-
-		get properties() {
+		/**
+		 * The declared properties of this component class. If a property is
+		 * not defined using `@property` then it will not be in this array
+		 * @todo need to determine what to do if we encounter a property that is not a declared `@property`
+		 * @type {Property[]}
+		 */
+		get properties(): Property[] {
+			if (!this._properties && this.tsNode) {
+				let propDeclarations = this.parseChildren(ts.SyntaxKind.PropertyDeclaration, true);
+				let props = [];
+				for (let i = 0; i < propDeclarations.length; i++) {
+					let propNode = propDeclarations[i];
+					let prop = new Property(propNode);
+					props.push(prop);
+				}
+				this._properties = props;
+			}
 			return this._properties || [];
 		}
 
@@ -305,7 +537,12 @@ export module RedPill {
 			return observersStr;
 		}
 	}
-
+	/**
+	 * The type of program types generally found in a component
+	 *
+	 * @export
+	 * @enum {number}
+	 */
 	export enum ProgramType {
 		Property = "PROPERTY",
 		Computed = "COMPUTED",
@@ -315,7 +552,11 @@ export module RedPill {
 		Observer = "OBSERVER",
 		Function = "FUNCTION"
 	}
-
+	/**
+	 * A comment for a program part
+	 * @export
+	 * @class Comment
+	 */
 	export class Comment {
 		private _commentObj: any;
 		private _commentText: string;
@@ -324,11 +565,14 @@ export module RedPill {
 		private _startLineNum: number;
 		private _tags: string[];
 
-		get commentObj() {
+		get commentObj(): any {
 			return this._commentObj;
 		}
-
-		get commentText() {
+		/**
+		 * The text of a comment
+		 * @type {string}
+		 */
+		get commentText(): string {
 			if (!this._commentText && this.commentObj) {
 				this._commentText = this.commentObj.content;
 			}
@@ -338,32 +582,44 @@ export module RedPill {
 		set commentText(commentText) {
 			this._commentText = commentText;
 		}
-
-		get endLineNum() {
+		/**
+		 * The comment ending line number
+		 * @type {number}
+		 */
+		get endLineNum(): number {
 			return this._endLineNum;
 		}
 
 		set endLineNum(endLineNum) {
 			this._endLineNum = endLineNum;
 		}
-
-		get isFor() {
+		/**
+		 * What type of Program part is this comment for
+		 * @type {ProgramType}
+		 */
+		get isFor(): ProgramType {
 			return this._isFor;
 		}
 
 		set isFor(isFor) {
 			this._isFor = isFor;
 		}
-
-		get startLineNum() {
+		/**
+		 * The comment starting line number
+		 * @type {number}
+		 */
+		get startLineNum(): number {
 			return this._startLineNum;
 		}
 
 		set startLineNum(startLineNum) {
 			this._startLineNum = startLineNum;
 		}
-
-		get tags() {
+		/**
+		 * The defined jsDoc tags in this comment
+		 * @type {string}
+		 */
+		get tags(): string[] {
 			return this._tags || [];
 		}
 
@@ -414,38 +670,83 @@ export module RedPill {
 			return markup;
 		}
 	}
-
+	/**
+	 * Class representing a function
+	 * @export
+	 * @class Function
+	 * @extends {ProgramPart}
+	 */
 	export class Function extends ProgramPart {
 		private _methodName: string;
 		private _parameters: string[];
 		private _returnType: string;
 		private _signature: string;
 
-		get methodName() {
+		constructor(node?: ts.Node) {
+			super();
+			this.tsNode = node;
+		}
+		/**
+		 * The name of the method
+		 * @type {string}
+		 */
+		get methodName(): string {
+			if (!this._methodName && this.tsNode) {
+				let methodNode = null;
+				if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
+					methodNode = <ts.MethodDeclaration> this.tsNode;
+				}else if (this.tsNode.kind === ts.SyntaxKind.ArrowFunction) {
+					methodNode = <ts.ArrowFunction> this.tsNode;
+				}
+				this._methodName = methodNode && methodNode.name ? methodNode.name.getText() : null;
+			}
 			return this._methodName;
 		}
 
 		set methodName(methodName) {
 			this._methodName = methodName;
 		}
-
-		get parameters() {
+		/**
+		 * The provided arguments
+		 * @type {string[]}
+		 */
+		get parameters(): string[] {
+			if (!this._parameters && this.tsNode) {
+				let params = [];
+				let methodNode: ts.MethodDeclaration = <ts.MethodDeclaration>this.tsNode;
+				let paramNodes = this.parseChildren(ts.SyntaxKind.Parameter, false);
+				for (let i = 0; i < paramNodes.length; i++) {
+					let paramNode: ts.ParameterDeclaration = <ts.ParameterDeclaration>paramNodes[i];
+					if (paramNode.parent === this.tsNode) {
+						params.push(paramNode.getText().replace(/\??:\s*[a-zA-Z]*/g, ''));
+					}
+				}
+				this._parameters = params;
+			}
 			return this._parameters || [];
 		}
 
 		set parameters(parameters) {
 			this._parameters = parameters || [];
 		}
-
-		get returnType() {
+		/**
+		 * The return type for this function. If the return type is not
+		 * defined in the declaration (i.e. function foo()**: string** {...}) then
+		 * this will be undefined
+		 * @type {string}
+		 */
+		get returnType(): string {
 			return this._returnType;
 		}
 
 		set returnType(returnType) {
 			this._returnType = returnType;
 		}
-
-		get signature() {
+		/**
+		 * The function signature NOT including the statements within the function
+		 * @type {string}
+		 */
+		get signature(): string {
 			if (!this._signature && this.methodName && this.parameters) {
 				this._signature = this.methodName + '(';
 				for (let i = 0; i < this.parameters.length; i++) {
@@ -490,47 +791,121 @@ export module RedPill {
 			return commentStr;
 		}
 	}
-
+	/**
+	 * Class representing a declared event listener defined with @listen
+	 * @export
+	 * @class Listener
+	 * @extends {ProgramPart}
+	 */
 	export class Listener extends ProgramPart {
 		private _elementId: string;
 		private _eventName: string;
 		private _eventDeclaration: string;
 		private _isExpression: boolean = false;
-		private _methodName: any;
+		private _methodName: string;
 
-		get elementId() {
+		constructor(node?: ts.Node) {
+			super();
+			this.tsNode = node;
+		}
+		/**
+		 * The element ID this listener is for
+		 * @type {string}
+		 */
+		get elementId(): string {
+			if (!this._elementId && !this.isExpression && this.tsNode) {
+				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
+				this._elementId = this.eventName ? sigArr[0] : null;
+			}
 			return this._elementId;
 		}
 
 		set elementId(elementId) {
 			this._elementId = elementId;
 		}
-
-		get eventDeclaration() {
+		/**
+		 * The entire listener declaration
+		 * @type {string}
+		 */
+		get eventDeclaration(): string {
+			if (!this._eventDeclaration && this.tsNode) {
+				if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
+					this.tsNode.decorators.forEach((decorator: ts.Decorator, idx) => {
+						let parseChildren = (decoratorChildNode) => {
+							let kindStr = (<any>ts).SyntaxKind[decoratorChildNode.kind] + '=' + decoratorChildNode.kind;
+							switch (decoratorChildNode.kind) {
+								case ts.SyntaxKind.StringLiteral:
+									let listenerStrNode = <ts.StringLiteral>decoratorChildNode;
+									this._eventDeclaration = listenerStrNode.getText();
+									break;
+								case ts.SyntaxKind.PropertyAccessExpression:
+									let listenerPropAccExp = <ts.PropertyAccessExpression>decoratorChildNode;
+									this._eventDeclaration = listenerPropAccExp.getText();
+									break;
+							};
+							ts.forEachChild(decoratorChildNode, parseChildren);
+						};
+						parseChildren(decorator);
+					});
+				}
+			}
 			return this._eventDeclaration;
 		}
 
 		set eventDeclaration(eventDeclaration) {
 			this._eventDeclaration = eventDeclaration;
 		}
-
-		get eventName() {
+		/**
+		 * The name of the event. If listening for an event on an element, this
+		 * will be something like 'click' or 'tap'
+		 * @type {string}
+		 */
+		get eventName(): string {
+			if (!this._eventName && this.tsNode) {
+				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
+				this._eventName = sigArr[1] || null;
+			}
 			return this._eventName;
 		}
 
 		set eventName(name) {
 			this._eventName = name;
 		}
-
-		get isExpression() {
+		/**
+		 * True if this listner is defined via an expression
+		 * @type {boolean}
+		 */
+		get isExpression(): boolean {
+			if (!this._isExpression && this.tsNode) {
+				if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
+					this.tsNode.decorators.forEach((decorator: ts.Decorator, idx) => {
+						let parseChildren = (decoratorChildNode) => {
+							switch (decoratorChildNode.kind) {
+								case ts.SyntaxKind.PropertyAccessExpression:
+									this._isExpression = true;
+									break;
+							};
+							ts.forEachChild(decoratorChildNode, parseChildren);
+						};
+						parseChildren(decorator);
+					});
+				}
+			}
 			return this._isExpression;
 		}
 
 		set isExpression(isExpression) {
 			this._isExpression = isExpression;
 		}
-
-		get methodName() {
+		/**
+		 * The name of the handler for this listener
+		 * @type {string}
+		 */
+		get methodName(): string {
+			if (!this._methodName && this.tsNode) {
+				let methodNode: ts.MethodDeclaration = <ts.MethodDeclaration>this.tsNode;
+				this._methodName = methodNode.name.getText();
+			}
 			return this._methodName;
 		}
 
@@ -548,12 +923,89 @@ export module RedPill {
 			return listenerStr;
 		}
 	}
-
+	/**
+	 * Class representing an observer defined with @observe
+	 *
+	 * @export
+	 * @class Observer
+	 * @extends {ProgramPart}
+	 */
 	export class Observer extends ProgramPart {
 		private _properties: string[];
-		private _methodName: any;
+		private _methodName: string;
+		private _isComplex: boolean = false;
 
+		constructor(node?: ts.Node) {
+			super();
+			this.tsNode = node;
+		}
+		/**
+		 * True if the observer declaration is for an object property or more
+		 * than 1 property is defined. (i.e. @computed('foo.*') or @computed('foo','bar'))
+		 * @type {boolean}
+		 */
+		get isComplex(): boolean {
+			if (!this._isComplex && this.tsNode) {
+				if (this.properties && this.properties.length > 0) {
+					this.properties.forEach((prop) => {
+						if (prop.indexOf('.') > -1) {
+							this._isComplex = true;
+						}
+					});
+					if (!this._isComplex && this.properties.length > 1) {
+						this._isComplex = true;
+					}
+				}
+
+			}
+			return this._isComplex;
+		}
+
+		set isComplex(isComplex) {
+			this._isComplex = isComplex;
+		}
+		/**
+		 * The name of the method for this observer
+		 * @type {string}
+		 */
+		get methodName(): string {
+			if (!this._methodName && this.tsNode) {
+				let methodNode: ts.MethodDeclaration = <ts.MethodDeclaration>this.tsNode;
+				this._methodName = methodNode.name.getText();
+			}
+			return this._methodName;
+		}
+
+		set methodName(methodName) {
+			this._methodName = methodName;
+		}
+		/**
+		 * Array of properties this observer listens to
+		 * @type {string[]}
+		 */
 		get properties(): string[] {
+			if (!this._properties && this.tsNode) {
+				let props = [];
+				if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
+					this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+						let parseChildren = (decoratorChildNode: ts.Node) => {
+							if (decoratorChildNode.kind === ts.SyntaxKind.StringLiteral) {
+								let observerStrNode = <ts.StringLiteral>decoratorChildNode;
+								let propsStr = observerStrNode.getText();
+								propsStr = propsStr.replace(/[\s']*/g, '');
+								if (propsStr.indexOf(',') > -1) {
+									props = props.concat(propsStr.split(','));
+								}else {
+									props.push(propsStr);
+								}
+							}
+							ts.forEachChild(decoratorChildNode, parseChildren);
+						};
+						parseChildren(decorator);
+					});
+				}
+				this._properties = props;
+			}
 			return this._properties;
 		}
 
@@ -561,13 +1013,6 @@ export module RedPill {
 			this._properties = properties;
 		}
 
-		get methodName() {
-			return this._methodName;
-		}
-
-		set methodName(methodName) {
-			this._methodName = methodName;
-		}
 		// TODO Fix this
 		toDocOnlyMarkup() {
 			let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
@@ -582,16 +1027,28 @@ export module RedPill {
 			return observerStr;
 		}
 	}
-
+	/**
+	 * Class representing a declared property defined using @property
+	 *
+	 * @export
+	 * @class Property
+	 * @extends {ProgramPart}
+	 */
 	export class Property extends ProgramPart {
 		private _containsValueArrayLiteral: boolean = false;
 		private _containsValueFunction: boolean = false;
 		private _containsValueObjectDeclaration: boolean = false;
 		private _name: string;
-		private _params: string;
+		protected _params: string;
 		private _type: string;
 		private _valueArrayParams: any;
+		private _valueFunction: Function;
 		private _valueObjectParams: any;
+
+		constructor(node?: ts.Node) {
+			super();
+			this.tsNode = node;
+		}
 
 		get derivedComment(): Comment {
 			if (!this.comment || !this.comment.commentText) {
@@ -603,7 +1060,17 @@ export module RedPill {
 			return this.comment;
 		}
 
-		get containsValueArrayLiteral() {
+		get containsValueArrayLiteral(): boolean {
+			if (!this._containsValueArrayLiteral && this.tsNode) {
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
+						let arrayLiteral = <ts.ArrayLiteralExpression>childNode;
+						this._containsValueArrayLiteral = true;
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._containsValueArrayLiteral;
 		}
 
@@ -611,7 +1078,18 @@ export module RedPill {
 			this._containsValueArrayLiteral = containsValueArrayLiteral;
 		}
 
-		get containsValueFunction() {
+		get containsValueFunction(): boolean {
+			if (!this._containsValueFunction && this.tsNode) {
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ArrowFunction) {
+						this._containsValueFunction = true;
+					} else if (childNode.kind === ts.SyntaxKind.MethodDeclaration) {
+						this._containsValueFunction = true;
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._containsValueFunction;
 		}
 
@@ -619,7 +1097,22 @@ export module RedPill {
 			this._containsValueFunction = containsValueFunction;
 		}
 
-		get containsValueObjectDeclaration() {
+		get containsValueObjectDeclaration(): boolean {
+			if (!this._containsValueObjectDeclaration && this.tsNode) {
+				// let insideProperty = false;
+				let insideProperty = false;
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
+						if (!insideProperty) {
+							insideProperty = true;
+						} else {
+							this._containsValueObjectDeclaration = true;
+						}
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._containsValueObjectDeclaration;
 		}
 
@@ -627,7 +1120,11 @@ export module RedPill {
 			this._containsValueObjectDeclaration = containsValueObjectDeclaration;
 		}
 
-		get name() {
+		get name(): string {
+			if (!this._name && this.tsNode) {
+				let propNode: ts.PropertyDeclaration = <ts.PropertyDeclaration>this.tsNode;
+				this._name = propNode.name.getText();
+			}
 			return this._name;
 		}
 
@@ -635,7 +1132,24 @@ export module RedPill {
 			this._name = name;
 		}
 
-		get params() {
+		get params(): string {
+			if (!this._params && this.tsNode) {
+				let insideProperty = false;
+				let parseChildren = (childNode: ts.Node) => {
+					console.log('Property.params.parseChildren, childNode kind=', (<any>ts).SyntaxKind[childNode.kind]);
+					console.log('Property.params.parseChildren, parentNode kind=', (<any>ts).SyntaxKind[childNode.parent.kind]);
+					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
+						let objExp = <ts.ObjectLiteralExpression>childNode;
+						if (!insideProperty) {
+							let objLiteralObj = getObjectLiteralString(objExp);
+							this._params = objLiteralObj.str;
+							insideProperty = true;
+						}
+					}
+					ts.forEachChild(childNode, parseChildren);
+				};
+				parseChildren(this.tsNode);
+			}
 			return this._params;
 		}
 
@@ -643,23 +1157,92 @@ export module RedPill {
 			this._params = params;
 		}
 
-		get type() {
+		get type(): string {
+			if (!this._type && this.tsNode) {
+				let insideProperty = false;
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
+						let objExp = <ts.ObjectLiteralExpression>childNode;
+						if (!insideProperty) {
+							let objLiteralObj = RedPill.getObjectLiteralString(objExp);
+							this._type = objLiteralObj.type;
+							insideProperty = true;
+						}
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._type;
 		}
 
 		set type(type) {
 			this._type = type;
 		}
-
-		get valueArrayParams() {
+		/**
+		 * A string with the array value definition. This would be populated if a property
+		 * is of type 'Array' with a value property that defines that array
+		 * @type {string}
+		 */
+		get valueArrayParams(): any {
+			if (!this._valueArrayParams && this.tsNode) {
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
+						let arrayLiteral = <ts.ArrayLiteralExpression>childNode;
+						this._valueArrayParams = arrayLiteral.getText();
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._valueArrayParams;
 		}
 
 		set valueArrayParams(valueArrayParams) {
 			this._valueArrayParams = valueArrayParams;
 		}
+		/**
+		 * If a property is defined with a value function, this is the defined
+		 * function
+		 * @type {Function}
+		 */
+		get valueFunction(): Function {
+			if (!this._valueFunction && this.tsNode) {
+				let parseChildren = (childNode: ts.Node) => {
+					let childKind = childNode.kind;
+					if (childKind === ts.SyntaxKind.MethodDeclaration || childKind === ts.SyntaxKind.ArrowFunction) {
+						this._valueFunction = new Function(childNode);
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
+			return this._valueFunction;
+		}
 
-		get valueObjectParams() {
+		set valueFunction(valueFunction) {
+			this._valueFunction = valueFunction;
+		}
+		/**
+		 * If a property is defined with an object literal as it's value, this is that object
+		 * @type {string}
+		 */
+		get valueObjectParams(): any {
+			if (!this._valueObjectParams && this.tsNode) {
+				let insideProperty = false;
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
+						let objExp = <ts.ObjectLiteralExpression>childNode;
+						if (!insideProperty) {
+							insideProperty = true;
+						} else {
+							this._valueObjectParams = RedPill.getObjectLiteralString(objExp).str;
+						}
+					}
+					ts.forEachChild(childNode, parseChildren);
+				}
+				parseChildren(this.tsNode);
+			}
 			return this._valueObjectParams;
 		}
 
@@ -813,17 +1396,61 @@ export module RedPill {
 			return propStr;
 		}
 	}
-
+	/**
+	 * Class representing a computed property defined with @computed
+	 * @export
+	 * @class ComputedProperty
+	 * @extends {Property}
+	 */
 	export class ComputedProperty extends Property {
-		private _methodName: any;
+		private _derivedMethodName: string;
+		private _methodName: string;
+		/**
+		 * If this computed property only contains a single property in it's definition
+		 * then this can be used to move that computed property to a declared property with
+		 * an observer definition
+		 * @type {string}
+		 */
+		get derivedMethodName(): string {
+			if (!this._derivedMethodName && this.tsNode) {
+				let methodNode = <ts.MethodDeclaration>this.tsNode;
+				this._derivedMethodName = '_get' + capitalizeFirstLetter(methodNode.name.getText().replace(/_/g, ''));
+			}
+			return this._derivedMethodName;
+		}
 
-		get methodName() {
+		set derivedMethodName(methodName) {
+			this._derivedMethodName = methodName;
+		}
+		/**
+		 * The actual method name of the method this observer is for
+		 * @type {string}
+		 */
+		get methodName(): string {
+			if (!this._methodName && this.tsNode) {
+				let methodNode = <ts.MethodDeclaration>this.tsNode;
+				this._methodName = methodNode.name.getText();
+			}
 			return this._methodName;
 		}
 
 		set methodName(methodName) {
 			this._methodName = methodName;
 		}
+
+		/* get params() {
+			if (!this.params && this.tsNode) {
+				let insideProp = false;
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression && !insideProp) {
+
+						insideProp = true;
+					}
+				}
+				parseChildren(this.tsNode);
+			}
+			return this._params;
+		} */
 		// TODO: Need to implement this so it adds the computed: methodName
 		private _getNewParams(): string {
 			let partsArr = this.params ? this.params.split(',') : [];
@@ -839,7 +1466,7 @@ export module RedPill {
 				newParamStr += '\t\t\t\t' + part.replace(/[/{/}\n\t]/g, '');
 				newParamStr += ',\n';
 			}
-			newParamStr += '\t\t\t\tcomputed: \'' + this.methodName + '\'\n';
+			newParamStr += '\t\t\t\tcomputed: \'' + this.derivedMethodName + '\'\n';
 			newParamStr += '\t\t\t}';
 			return newParamStr;
 		}
@@ -855,6 +1482,7 @@ export module RedPill {
 		}
 	}
 
+/************ UTIL Functions to make repetitive tasks easier ***********/
 	/**
 	 * An empty class for the PathInfo object. Used mainly for property
 	 * checking and typeahead
@@ -1099,9 +1727,9 @@ export module RedPill {
 	export function getMethodFromComputed(computed: ComputedProperty): Function {
 		let computedMethod = null;
 		if (computed) {
-			if (computed.methodName) {
+			if (computed.derivedMethodName) {
 				computedMethod = new Function();
-				computedMethod.methodName = computed.methodName;
+				computedMethod.methodName = computed.derivedMethodName;
 				if (computed.comment) {
 					computedMethod.comment = new Comment();
 					computedMethod.comment.commentText = computed.comment.commentText;

@@ -1,0 +1,27 @@
+{
+	"preset": "google",
+	"fileExtensions": [".js", "jscs", ".ts"],
+	"requireParenthesesAroundIIFE": true,
+	"requireCurlyBraces": ["if", "else", "for", "while", "do", "try", "catch"],
+	"requireSpacesInFunctionExpression": {
+		"beforeOpeningCurlyBrace": true
+	},
+	"requireCamelCaseOrUpperCaseIdentifiers": true,
+	"maximumLineLength": 120,
+	"validateLineBreaks": "LF",
+	"validateIndentation": "\t",
+	"disallowSpacesInsideObjectBrackets": true,
+	"disallowImplicitTypeConversion": ["string"],
+	"disallowMixedSpacesAndTabs": true,
+	"disallowSpacesInsideArrayBrackets": true,
+	"disallowSpacesInsideParentheses": true,
+	"safeContextKeyword": "that",
+	"maxErrors": 500,
+	"excludeFiles": [
+		"node_modules/**/*.*",
+		"src/bower_components/**/*.*",
+		"src/**/*.js",
+		"tools/**/*.js",
+		"demo/**/*.js"
+	]
+}

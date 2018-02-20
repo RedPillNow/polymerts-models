@@ -14,3 +14,7 @@ The following projects are used by/in this project:
 * [polymer-decorators](https://github.com/Polymer/polymer-decorators)
 * [Polymer](https://polymer-project.org)
 
+## Contributing
+
+Fork it and submit a pull request
+

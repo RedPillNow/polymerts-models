@@ -1,5 +1,10 @@
 import * as ts from 'typescript';
 export declare module RedPill {
+    class Warning {
+        private _text;
+        constructor(warningText?: string);
+        text: string;
+    }
     abstract class ProgramPart {
         private _comment;
         private _endLineNum;
@@ -9,11 +14,14 @@ export declare module RedPill {
         abstract polymerSignature: any;
         abstract polymerDecoratorSignature: any;
         abstract polymerIronPageSignature: any;
+        private _warnings;
         comment: Comment;
         endLineNum: number;
         filePath: string;
         startLineNum: number;
         tsNode: ts.Node;
+        warnings: Warning[];
+        addWarning(warningText: any): void;
         parseChildren(returnType: ts.SyntaxKind, hasDecorators: boolean): any[];
     }
     class IncludedBehavior extends ProgramPart {
@@ -177,17 +185,23 @@ export declare module RedPill {
         private _derivedMethodName;
         private _method;
         private _methodName;
+        protected _polymerDecoratedPropertySignature: string;
+        protected _polymerDecoratorSignature: string;
+        protected _polymerDecoratorTypedSignature: string;
+        protected _polymerSignature: string;
+        protected _polymerIronPageSignature: string;
         constructor(node?: ts.Node, component?: Component);
         component: Component;
         derivedMethodName: string;
         method: Function;
         methodName: string;
-        readonly polymerSignature: string;
+        readonly polymerDecoratedPropertySignature: string;
         readonly polymerDecoratorSignature: string;
+        readonly polymerDecoratorTypedSignature: string;
+        readonly polymerSignature: string;
         readonly polymerIronPageSignature: string;
         readonly propertyName: string;
         private _getNewParams();
-        toDocOnlyMarkup(): string;
     }
     class PathInfo {
         fileName: string;

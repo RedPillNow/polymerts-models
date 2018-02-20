@@ -5,6 +5,29 @@ import * as ts from 'typescript';
 
 export module RedPill {
 	/**
+	 * this class is for storing warnings that we encountered with a particular ProgramPart
+	 * @class Warning
+	 */
+	export class Warning {
+		private _text;
+
+		constructor(warningText?: string) {
+			this.text = warningText;
+		}
+		/**
+		 * The warning text
+		 * @type {string}
+		 */
+		get text(): string {
+			return this._text;
+		}
+
+		set text(text) {
+			this._text = text;
+		}
+	}
+
+	/**
 	 * Top level abstract class representing a component or part of a component. It contains
 	 * basic properties, getters, setters and abstract class definition
 	 * @export
@@ -20,6 +43,7 @@ export module RedPill {
 		abstract polymerSignature;
 		abstract polymerDecoratorSignature;
 		abstract polymerIronPageSignature;
+		private _warnings: Warning[] = [];
 
 		/**
 		 * A comment object derived during the parsing
@@ -109,6 +133,27 @@ export module RedPill {
 
 		set tsNode(tsNode) {
 			this._tsNode = tsNode;
+		}
+		/**
+		 * An array of warnings which were encountered while processing a particular
+		 * program part.
+		 * @type {Warning[]}
+		 */
+		get warnings(): Warning[] {
+			return this._warnings;
+		}
+
+		set warnings(warnings) {
+			this._warnings = warnings;
+		}
+		/**
+		 * Add a warning to this program part instance
+		 * @param {any} warningText
+		 */
+		addWarning(warningText) {
+			let warnings = this.warnings || [];
+			warnings.push(new Warning(warningText));
+			this.warnings = warnings;
 		}
 		/**
 		 * Parse the children of tsNode. Look for the returnType and return an array
@@ -1061,6 +1106,8 @@ export module RedPill {
 				this._polymerDecoratorSignature += props ? props : '';
 				this._polymerDecoratorSignature += '\')\n\t\t\t';
 				this._polymerDecoratorSignature += this.method.polymerSignature;
+			} else if (!this.isComplex) {
+				this.addWarning('Observer.polymerDecoratorSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should just be defined in a declared property');
 			}
 			return this._polymerDecoratorSignature;
 		}
@@ -1093,6 +1140,8 @@ export module RedPill {
 		get polymerSignature(): string {
 			if (!this._polymerSignature && this.isComplex && this.method) {
 				this._polymerSignature = this.method.polymerSignature;
+			}else if (!this.isComplex) {
+				this.addWarning('Observer.polymerSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should be just be added to a declared property');
 			}
 			return this._polymerSignature;
 		}
@@ -1222,7 +1271,7 @@ export module RedPill {
 			this._name = name;
 		}
 		/**
-		 * The defined parameters
+		 * The defined parameters for this property
 		 * @type {string}
 		 */
 		get params(): string {
@@ -1257,7 +1306,7 @@ export module RedPill {
 			if (!this._polymerDecoratorSignature && this.tsNode) {
 				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
 				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '\n' + this.tsNode.getText();
+				this._polymerDecoratorSignature += '\n\t\t\t' + this.tsNode.getText();
 			}
 			return this._polymerDecoratorSignature;
 		}
@@ -1399,10 +1448,11 @@ export module RedPill {
 		private _derivedMethodName: string;
 		private _method: Function;
 		private _methodName: string;
+		protected _polymerDecoratedPropertySignature: string;
 		protected _polymerDecoratorSignature: string;
+		protected _polymerDecoratorTypedSignature: string;
 		protected _polymerSignature: string;
 		protected _polymerIronPageSignature: string;
-		private _polymerPropertySignature: string;
 
 		constructor(node?: ts.Node, component?: Component) {
 			super();
@@ -1471,15 +1521,40 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * Use this to get a decorated property with the computed
+		 * parameter defined
 		 * @readonly
 		 * @type {string}
 		 */
-		get polymerSignature() {
-			if (!this._polymerSignature && this.method) {
-				this._polymerSignature = this.method.polymerSignature;
+		get polymerDecoratedPropertySignature(): string {
+			if (!this._polymerDecoratedPropertySignature && this.method) {
+				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				this._polymerDecoratedPropertySignature = comment;
+				this._polymerDecoratedPropertySignature += '\t\t\t@property(';
+				let paramsObj: any = {};
+				if (this.params) {
+					paramsObj = getObjectFromString(this.params);
+				}else {
+					this.addWarning('ComputedProperty.polymerDecoratedPropertySignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
+					paramsObj = {
+						type: 'Object',
+						computed: ''
+					};
+				}
+				paramsObj.computed = this.propertyName + '(';
+				let methodParams = this.method.parameters;
+				for (let i = 0; i < methodParams.length; i++) {
+					let param = methodParams[i];
+					paramsObj.computed += '\'' + param + '\'';
+					paramsObj.computed += i < (methodParams.length - 1) ? ',' : ''
+				}
+				paramsObj.computed += ')';
+				this._polymerDecoratedPropertySignature += getStringFromObject(paramsObj);
+				this._polymerDecoratedPropertySignature += ')\n';
+				this._polymerDecoratedPropertySignature += 'get ' + this.propertyName + ': any;';
+				this.addWarning('ComputedProperty.polymerDecoratedPropertySignature ' + this.propertyName + ' - Since we don\'t have type information, type set to \'any\'');
 			}
-			return this._polymerSignature;
+			return this._polymerDecoratedPropertySignature;
 		}
 		/**
 		 * Generates markup which aligns with the polymer-decorators
@@ -1505,10 +1580,65 @@ export module RedPill {
 						this._polymerDecoratorSignature += ',';
 					}
 				}
-				this._polymerDecoratorSignature += ')\n\t\t\t';
-				this._polymerDecoratorSignature += this.method.polymerSignature;
+				this._polymerDecoratorSignature += ')\n';
+				this._polymerDecoratorSignature += '\t\t\tget ' + this.method.polymerSignature;
 			}
 			return this._polymerDecoratorSignature;
+		}
+		/**
+		 * Generate a typed signature with decorator
+		 * @example
+		 * ```typescript
+		 * @computed<MyElement>('foo', 'bar')
+		 * @property({type: String})
+		 * get fooBar() {...}
+		 * ```
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerDecoratorTypedSignature(): string {
+			if (!this._polymerDecoratorTypedSignature && this.method) {
+				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
+				this._polymerDecoratorTypedSignature = comment;
+				this._polymerDecoratorTypedSignature += '\t\t\t@computed';
+				if (componentClass) {
+					this._polymerDecoratorTypedSignature += '<' + componentClass + '>';
+				}
+				this._polymerDecoratorTypedSignature += '(';
+				let methodParams = this.method.parameters;
+				for (let i = 0; i < methodParams.length; i++) {
+					let param = methodParams[i];
+					this._polymerDecoratorTypedSignature += '\'' + param + '\'';
+					if (i < (methodParams.length - 1)) {
+						this._polymerDecoratorTypedSignature += ',';
+					}
+				}
+				this._polymerDecoratorTypedSignature += ')\n';
+				this._polymerDecoratorTypedSignature += '\t\t\t@property(';
+				let paramsObj: any = {};
+				if (this.params) {
+					paramsObj = getObjectFromString(this.params);
+				}else {
+					this.addWarning('ComputedPropety.polymerDecoratorSignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
+					paramsObj = {type: 'Object'};
+				}
+				this._polymerDecoratorTypedSignature += getStringFromObject(paramsObj);
+				this._polymerDecoratorTypedSignature += ')\n';
+				this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+			}
+			return this._polymerDecoratorTypedSignature;
+		}
+		/**
+		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerSignature() {
+			if (!this._polymerSignature && this.method) {
+				this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+			}
+			return this._polymerSignature;
 		}
 		/**
 		 * Generates markup which can be used to create documentation which

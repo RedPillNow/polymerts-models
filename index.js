@@ -14,8 +14,26 @@ var path = require("path");
 var ts = require("typescript");
 var RedPill;
 (function (RedPill) {
+    var Warning = (function () {
+        function Warning(warningText) {
+            this.text = warningText;
+        }
+        Object.defineProperty(Warning.prototype, "text", {
+            get: function () {
+                return this._text;
+            },
+            set: function (text) {
+                this._text = text;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return Warning;
+    }());
+    RedPill.Warning = Warning;
     var ProgramPart = (function () {
         function ProgramPart() {
+            this._warnings = [];
         }
         Object.defineProperty(ProgramPart.prototype, "comment", {
             get: function () {
@@ -101,6 +119,21 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ProgramPart.prototype, "warnings", {
+            get: function () {
+                return this._warnings;
+            },
+            set: function (warnings) {
+                this._warnings = warnings;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ProgramPart.prototype.addWarning = function (warningText) {
+            var warnings = this.warnings || [];
+            warnings.push(new Warning(warningText));
+            this.warnings = warnings;
+        };
         ProgramPart.prototype.parseChildren = function (returnType, hasDecorators) {
             var kidsOfType = [];
             var parseKids = function (node) {
@@ -587,7 +620,7 @@ var RedPill;
             get: function () {
                 if (!this._polymerSignature && this.tsNode) {
                     var methodDecl = this.tsNode;
-                    this._polymerSignature = this.methodName + '(';
+                    this._polymerSignature = '\t\t\t' + this.methodName + '(';
                     for (var i = 0; i < this.parameters.length; i++) {
                         this._polymerSignature += this.parameters[i];
                         this._polymerSignature += (i + 1) < this.parameters.length ? ', ' : '';
@@ -1285,22 +1318,52 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
+        Object.defineProperty(ComputedProperty.prototype, "polymerDecoratedPropertySignature", {
             get: function () {
-                if (!this._polymerSignature && this.method) {
-                    this._polymerSignature = this.method.polymerSignature;
+                if (!this._polymerDecoratedPropertySignature && this.method) {
+                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerDecoratedPropertySignature = comment;
+                    this._polymerDecoratedPropertySignature += '\t\t\t@property(';
+                    var paramsObj = {};
+                    if (this.params) {
+                        paramsObj = getObjectFromString(this.params);
+                    }
+                    else {
+                        this.addWarning('ComputedProperty.polymerDecoratedPropertySignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
+                        paramsObj = {
+                            type: 'Object',
+                            computed: ''
+                        };
+                    }
+                    paramsObj.computed = this.propertyName + '(';
+                    var methodParams = this.method.parameters;
+                    for (var i = 0; i < methodParams.length; i++) {
+                        var param = methodParams[i];
+                        paramsObj.computed += '\'' + param + '\'';
+                        paramsObj.computed += i < (methodParams.length - 1) ? ',' : '';
+                    }
+                    paramsObj.computed += ')';
+                    this._polymerDecoratedPropertySignature += getStringFromObject(paramsObj);
+                    this._polymerDecoratedPropertySignature += ')\n';
+                    this._polymerDecoratedPropertySignature += 'get ' + this.propertyName + ': any;';
+                    this.addWarning('ComputedProperty.polymerDecoratedPropertySignature ' + this.propertyName + ' - Since we don\'t have type information, type set to \'any\'');
                 }
-                return this._polymerSignature;
+                return this._polymerDecoratedPropertySignature;
             },
             enumerable: true,
             configurable: true
         });
         Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorSignature", {
             get: function () {
-                if (!this._polymerDecoratorSignature && this.method) {
+                if (!this._polymerDecoratorSignature && this.method && this.component) {
                     var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    var componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
                     this._polymerDecoratorSignature = comment;
-                    this._polymerDecoratorSignature += '\t\t\t@computed(';
+                    this._polymerDecoratorSignature += '\t\t\t@computed';
+                    if (componentClass) {
+                        this._polymerDecoratorSignature += '<' + componentClass + '>';
+                    }
+                    this._polymerDecoratorSignature += '(';
                     var methodParams = this.method.parameters;
                     for (var i = 0; i < methodParams.length; i++) {
                         var param = methodParams[i];
@@ -1309,10 +1372,58 @@ var RedPill;
                             this._polymerDecoratorSignature += ',';
                         }
                     }
-                    this._polymerDecoratorSignature += ')\n\t\t\t';
-                    this._polymerDecoratorSignature += this.method.polymerSignature;
+                    this._polymerDecoratorSignature += ')\n';
+                    this._polymerDecoratorSignature += '\t\t\tget ' + this.method.polymerSignature;
                 }
                 return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorTypedSignature", {
+            get: function () {
+                if (!this._polymerDecoratorTypedSignature && this.method) {
+                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    var componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
+                    this._polymerDecoratorTypedSignature = comment;
+                    this._polymerDecoratorTypedSignature += '\t\t\t@computed';
+                    if (componentClass) {
+                        this._polymerDecoratorTypedSignature += '<' + componentClass + '>';
+                    }
+                    this._polymerDecoratorTypedSignature += '(';
+                    var methodParams = this.method.parameters;
+                    for (var i = 0; i < methodParams.length; i++) {
+                        var param = methodParams[i];
+                        this._polymerDecoratorTypedSignature += '\'' + param + '\'';
+                        if (i < (methodParams.length - 1)) {
+                            this._polymerDecoratorTypedSignature += ',';
+                        }
+                    }
+                    this._polymerDecoratorTypedSignature += ')\n';
+                    this._polymerDecoratorTypedSignature += '\t\t\t@property(';
+                    var paramsObj = {};
+                    if (this.params) {
+                        paramsObj = getObjectFromString(this.params);
+                    }
+                    else {
+                        this.addWarning('ComputedPropety.polymerDecoratorSignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
+                        paramsObj = { type: 'Object' };
+                    }
+                    this._polymerDecoratorTypedSignature += getStringFromObject(paramsObj);
+                    this._polymerDecoratorTypedSignature += ')\n';
+                    this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+                }
+                return this._polymerDecoratorTypedSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
+            get: function () {
+                if (!this._polymerSignature && this.method) {
+                    this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+                }
+                return this._polymerSignature;
             },
             enumerable: true,
             configurable: true
@@ -1356,15 +1467,6 @@ var RedPill;
             newParamStr += '\t\t\t\tcomputed: \'' + this.derivedMethodName + '\'\n';
             newParamStr += '\t\t\t}';
             return newParamStr;
-        };
-        ComputedProperty.prototype.toDocOnlyMarkup = function () {
-            var nameParts = this.name.split(':');
-            var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-            var propStr = comment;
-            propStr += '\t\t\t' + nameParts[0];
-            propStr += ': ';
-            propStr += this._getNewParams();
-            return propStr;
         };
         return ComputedProperty;
     }(Property));

@@ -1,9 +1,11 @@
 {
-	"name": "polymer-typescript-models",
-	"version": "1.0.0",
-	"description": "Models for the pieces of a Polymer element",
+	"name": "polymerts-models",
+	"version": "0.1.0",
+	"description": "Models for the pieces of a PolymerTS element",
 	"keywords": [
-		"polymer"
+		"polymer",
+		"polymer-decorators",
+		"polymerTS"
 	],
 	"main": "index.js",
 	"scripts": {
@@ -15,6 +17,13 @@
 		"name": "Keith Strickland",
 		"email": "keith@redpillnow.com",
 		"url": "http://keithstric.me"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/RedPillNow/polymerts-models"
+	},
+	"bugs": {
+		"url": "https://github.com/RedPillNow/polymerts-models/issues"
 	},
 	"license": "Apache-2.0",
 	"devDependencies": {

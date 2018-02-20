@@ -6,7 +6,9 @@ export declare module RedPill {
         private _filePath;
         private _startLineNum;
         private _tsNode;
-        abstract toDocOnlyMarkup(): string;
+        abstract polymerSignature: any;
+        abstract polymerDecoratorSignature: any;
+        abstract polymerIronPageSignature: any;
         comment: Comment;
         endLineNum: number;
         filePath: string;
@@ -16,7 +18,13 @@ export declare module RedPill {
     }
     class IncludedBehavior extends ProgramPart {
         private _name;
+        private _polymerSignature;
+        private _polymerDecoratorSignature;
+        private _polymerIronPageSignature;
         name: string;
+        readonly polymerSignature: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
         toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
@@ -30,6 +38,9 @@ export declare module RedPill {
         private _methods;
         private _name;
         private _namespace;
+        private _polymerSignature;
+        private _polymerDecoratorSignature;
+        private _polymerIronPageSignature;
         private _properties;
         private _observers;
         constructor(node?: ts.ClassDeclaration);
@@ -40,20 +51,14 @@ export declare module RedPill {
         extendsClass: string;
         htmlFilePath: string;
         listeners: Listener[];
-        methods: any[];
+        methods: Function[];
         name: string;
         namespace: string;
         observers: Observer[];
+        readonly polymerSignature: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
         properties: Property[];
-        toDocOnlyMarkup(): string;
-        protected _writeDocHtmlComment(): string;
-        protected _writeDocHead(): string;
-        protected _writeDocFoot(): string;
-        protected _writeDocProperties(): string;
-        protected _writeDocBehaviors(): string;
-        protected _writeDocListeners(): string;
-        protected _writeDocMethods(): string;
-        protected _writeDocObservers(): string;
     }
     enum ProgramType {
         Property = "PROPERTY",
@@ -83,14 +88,17 @@ export declare module RedPill {
     class Function extends ProgramPart {
         private _methodName;
         private _parameters;
+        private _polymerDecoratorSignature;
+        private _polymerSignature;
+        private _polymerIronPageSignature;
         private _returnType;
-        private _signature;
         constructor(node?: ts.Node);
         methodName: string;
         parameters: string[];
+        readonly polymerSignature: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
         returnType: string;
-        signature: string;
-        toDocOnlyMarkup(): string;
     }
     class HtmlComment {
         private _comment;
@@ -103,23 +111,38 @@ export declare module RedPill {
         private _eventDeclaration;
         private _isExpression;
         private _methodName;
+        private _polymerDecoratorSignature;
+        private _polymerSignature;
+        private _polymerIronPageSignature;
         constructor(node?: ts.Node);
         elementId: string;
         eventDeclaration: string;
         eventName: string;
         isExpression: boolean;
-        methodName: any;
+        methodName: string;
+        readonly polymerSignature: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
         toDocOnlyMarkup(): string;
     }
     class Observer extends ProgramPart {
-        private _properties;
-        private _methodName;
         private _isComplex;
+        private _method;
+        private _methodName;
+        private _params;
+        private _polymerDecoratorSignature;
+        private _polymerSignature;
+        private _polymerIronPageSignature;
+        private _observerArrayEntrySignature;
+        private _observerPropertySignature;
         constructor(node?: ts.Node);
         isComplex: boolean;
-        methodName: any;
-        properties: string[];
-        toDocOnlyMarkup(): string;
+        method: Function;
+        methodName: string;
+        params: string[];
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
+        readonly polymerSignature: string;
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;
@@ -127,6 +150,9 @@ export declare module RedPill {
         private _containsValueObjectDeclaration;
         private _name;
         protected _params: string;
+        protected _polymerDecoratorSignature: string;
+        protected _polymerSignature: string;
+        protected _polymerIronPageSignature: string;
         private _type;
         private _valueArrayParams;
         private _valueFunction;
@@ -138,22 +164,28 @@ export declare module RedPill {
         containsValueObjectDeclaration: boolean;
         name: string;
         params: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
+        readonly polymerSignature: string;
         type: string;
         valueArrayParams: any;
         valueFunction: Function;
         valueObjectParams: any;
-        private _parseParams();
-        private _isPartOfValue(part);
-        private _parseValueArray();
-        private _parseValueObject();
-        private _parseValueFunction(valueFunctionPart);
-        toDocOnlyMarkup(): string;
     }
     class ComputedProperty extends Property {
+        private _component;
         private _derivedMethodName;
+        private _method;
         private _methodName;
+        constructor(node?: ts.Node, component?: Component);
+        component: Component;
         derivedMethodName: string;
+        method: Function;
         methodName: string;
+        readonly polymerSignature: string;
+        readonly polymerDecoratorSignature: string;
+        readonly polymerIronPageSignature: string;
+        readonly propertyName: string;
         private _getNewParams();
         toDocOnlyMarkup(): string;
     }
@@ -179,7 +211,6 @@ export declare module RedPill {
     function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
     function getMethodFromListener(listener: Listener): Function;
     function getMethodFromComputed(computed: ComputedProperty): Function;
-    function getMethodFromObserver(observer: Observer): Function;
     function isComputedProperty(node: ts.MethodDeclaration): boolean;
     function isListener(node: ts.MethodDeclaration): boolean;
     function isObserver(node: ts.MethodDeclaration): boolean;

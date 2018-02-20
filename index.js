@@ -10,9 +10,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var fs = require("fs");
 var path = require("path");
-var htmlParser = require("htmlparser2");
 var ts = require("typescript");
 var RedPill;
 (function (RedPill) {
@@ -140,6 +138,27 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(IncludedBehavior.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(IncludedBehavior.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(IncludedBehavior.prototype, "polymerIronPageSignature", {
+            get: function () {
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         IncludedBehavior.prototype.toDocOnlyMarkup = function () {
             var comment = this.comment ? '\n' + this.comment.toDocOnlyMarkup() : '';
             var behaviorStr = comment;
@@ -203,7 +222,7 @@ var RedPill;
                     for (var i = 0; i < computedDeclarations.length; i++) {
                         var computedPropNode = computedDeclarations[i];
                         if (isComputedProperty(computedPropNode)) {
-                            var computedProperty = new ComputedProperty(computedPropNode);
+                            var computedProperty = new ComputedProperty(computedPropNode, this);
                             computedProps.push(computedProperty);
                         }
                     }
@@ -354,6 +373,27 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Component.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "polymerIronPageSignature", {
+            get: function () {
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Component.prototype, "properties", {
             get: function () {
                 if (!this._properties && this.tsNode) {
@@ -374,110 +414,6 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Component.prototype.toDocOnlyMarkup = function () {
-            var componentStr = this._writeDocHtmlComment();
-            componentStr += this._writeDocHead();
-            if (this.behaviors && this.behaviors.length > 0) {
-                componentStr += this._writeDocBehaviors();
-            }
-            if (this.properties && this.properties.length > 0) {
-                componentStr += this._writeDocProperties();
-            }
-            if (this.observers && this.observers.length > 0) {
-                componentStr += this._writeDocObservers();
-            }
-            if (this.listeners && this.listeners.length > 0) {
-                componentStr += this._writeDocListeners();
-            }
-            if (this.observers && this.observers.length > 0) {
-            }
-            if (this.methods && this.methods.length > 0) {
-                componentStr += this._writeDocMethods();
-            }
-            componentStr += this._writeDocFoot();
-            return componentStr;
-        };
-        Component.prototype._writeDocHtmlComment = function () {
-            var comment = null;
-            var parser = new htmlParser.Parser({
-                oncomment: function (data) {
-                    if (data.indexOf('@demo') > -1 || data.indexOf('@hero') > -1) {
-                        comment = new HtmlComment();
-                        comment.comment = data;
-                    }
-                }
-            }, { decodeEntities: true });
-            parser.write(fs.readFileSync(this.htmlFilePath));
-            parser.end();
-            return comment ? comment.toDocOnlyMarkup() : '';
-        };
-        Component.prototype._writeDocHead = function () {
-            var headStr = '<dom-module id="' + this.name + '">\n';
-            headStr += '\t<template>\n';
-            headStr += '\t\t<style></style>\n';
-            headStr += '\t\t<script>\n';
-            headStr += '(function() {\n';
-            headStr += '\tPolymer({\n';
-            headStr += '\t\tis: \'' + this.name + '\',';
-            return headStr;
-        };
-        Component.prototype._writeDocFoot = function () {
-            var footStr = '\n\t});\n';
-            footStr += '})();\n';
-            footStr += '\t\t</script>\n';
-            footStr += '\t</template>\n';
-            footStr += '</dom-module>\n';
-            return footStr;
-        };
-        Component.prototype._writeDocProperties = function () {
-            var propertiesStr = '\n\t\tproperties: {';
-            for (var i = 0; i < this.properties.length; i++) {
-                var prop = this.properties[i];
-                propertiesStr += prop.toDocOnlyMarkup();
-                propertiesStr += (i + 1) < this.properties.length ? ',' : '';
-            }
-            propertiesStr += '\n\t\t},';
-            return propertiesStr;
-        };
-        Component.prototype._writeDocBehaviors = function () {
-            var behaviorsStr = '\n\t\tbehaviors: [\n';
-            for (var i = 0; i < this.behaviors.length; i++) {
-                var behavior = this.behaviors[i];
-                behaviorsStr += '\t\t\t' + behavior.toDocOnlyMarkup();
-                behaviorsStr += (i + 1) < this.behaviors.length ? ',\n' : '';
-            }
-            behaviorsStr += '\n\t\t],';
-            return behaviorsStr;
-        };
-        Component.prototype._writeDocListeners = function () {
-            var listenersStr = '\n\t\tlisteners: {\n';
-            for (var i = 0; i < this.listeners.length; i++) {
-                var listener = this.listeners[i];
-                listenersStr += listener.toDocOnlyMarkup();
-                listenersStr += (i + 1) < this.listeners.length ? ',\n' : '';
-            }
-            listenersStr += '\n\t\t},';
-            return listenersStr;
-        };
-        Component.prototype._writeDocMethods = function () {
-            var methodsStr = '';
-            for (var i = 0; i < this.methods.length; i++) {
-                var method = this.methods[i];
-                methodsStr += '\n' + method.toDocOnlyMarkup();
-                methodsStr += (i + 1) < this.methods.length ? ',' : '';
-            }
-            return methodsStr;
-        };
-        Component.prototype._writeDocObservers = function () {
-            var observersStr = '\n\t\tobservers: [\n';
-            for (var i = 0; i < this.observers.length; i++) {
-                var observer = this.observers[i];
-                observersStr += observer.toDocOnlyMarkup();
-                observersStr += (i + 1) < this.observers.length ? ',\n' : '';
-            }
-            observersStr += '\n\t\t\],';
-            return observersStr;
-        };
         return Component;
     }(ProgramPart));
     RedPill.Component = Component;
@@ -647,6 +583,45 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Function.prototype, "polymerSignature", {
+            get: function () {
+                if (!this._polymerSignature && this.tsNode) {
+                    var methodDecl = this.tsNode;
+                    this._polymerSignature = this.methodName + '(';
+                    for (var i = 0; i < this.parameters.length; i++) {
+                        this._polymerSignature += this.parameters[i];
+                        this._polymerSignature += (i + 1) < this.parameters.length ? ', ' : '';
+                    }
+                    this._polymerSignature += ')';
+                    this._polymerSignature += methodDecl.body.getText();
+                }
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Function.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                return this.polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Function.prototype, "polymerIronPageSignature", {
+            get: function () {
+                if (!this._polymerIronPageSignature && this.methodName && this.parameters) {
+                    this._polymerIronPageSignature = this.methodName + '(';
+                    for (var i = 0; i < this.parameters.length; i++) {
+                        this._polymerIronPageSignature += this.parameters[i];
+                        this._polymerIronPageSignature += (i + 1) < this.parameters.length ? ', ' : '';
+                    }
+                    this._polymerIronPageSignature += ') {}';
+                }
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Function.prototype, "returnType", {
             get: function () {
                 return this._returnType;
@@ -657,30 +632,6 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Function.prototype, "signature", {
-            get: function () {
-                if (!this._signature && this.methodName && this.parameters) {
-                    this._signature = this.methodName + '(';
-                    for (var i = 0; i < this.parameters.length; i++) {
-                        this._signature += this.parameters[i];
-                        this._signature += (i + 1) < this.parameters.length ? ', ' : '';
-                    }
-                    this._signature += ') {}';
-                }
-                return this._signature;
-            },
-            set: function (signature) {
-                this._signature = signature;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Function.prototype.toDocOnlyMarkup = function () {
-            var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-            var functionStr = comment;
-            functionStr += '\t\t' + this.signature;
-            return functionStr;
-        };
         return Function;
     }(ProgramPart));
     RedPill.Function = Function;
@@ -819,6 +770,27 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Listener.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Listener.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Listener.prototype, "polymerIronPageSignature", {
+            get: function () {
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Listener.prototype.toDocOnlyMarkup = function () {
             var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
             var listenerStr = comment;
@@ -843,13 +815,13 @@ var RedPill;
             get: function () {
                 var _this = this;
                 if (!this._isComplex && this.tsNode) {
-                    if (this.properties && this.properties.length > 0) {
-                        this.properties.forEach(function (prop) {
+                    if (this.params && this.params.length > 0) {
+                        this.params.forEach(function (prop) {
                             if (prop.indexOf('.') > -1) {
                                 _this._isComplex = true;
                             }
                         });
-                        if (!this._isComplex && this.properties.length > 1) {
+                        if (!this._isComplex && this.params.length > 1) {
                             this._isComplex = true;
                         }
                     }
@@ -858,6 +830,22 @@ var RedPill;
             },
             set: function (isComplex) {
                 this._isComplex = isComplex;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Observer.prototype, "method", {
+            get: function () {
+                if (!this._method && this.tsNode) {
+                    if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
+                        var methodDecl = this.tsNode;
+                        this._method = new Function(methodDecl);
+                    }
+                }
+                return this._method;
+            },
+            set: function (method) {
+                this._method = method;
             },
             enumerable: true,
             configurable: true
@@ -876,9 +864,9 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Observer.prototype, "properties", {
+        Object.defineProperty(Observer.prototype, "params", {
             get: function () {
-                if (!this._properties && this.tsNode) {
+                if (!this._params && this.tsNode) {
                     var props_1 = [];
                     if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
                         this.tsNode.decorators.forEach(function (decorator) {
@@ -899,28 +887,70 @@ var RedPill;
                             parseChildren(decorator);
                         });
                     }
-                    this._properties = props_1;
+                    this._params = props_1;
                 }
-                return this._properties;
+                return this._params;
             },
             set: function (properties) {
-                this._properties = properties;
+                this._params = properties;
             },
             enumerable: true,
             configurable: true
         });
-        Observer.prototype.toDocOnlyMarkup = function () {
-            var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-            var observerStr = comment;
-            observerStr += '\t\t\t\'' + this.methodName + '(';
-            for (var i = 0; i < this.properties.length; i++) {
-                var prop = this.properties[i];
-                observerStr += prop;
-                observerStr += (i + 1) < this.properties.length ? ',' : '';
-            }
-            observerStr += ')\'';
-            return observerStr;
-        };
+        Object.defineProperty(Observer.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                var _this = this;
+                if (!this._polymerDecoratorSignature && this.isComplex && this.method) {
+                    var parseProps = function () {
+                        var propsStr = '';
+                        for (var i = 0; i < _this.params.length; i++) {
+                            var prop = _this.params[i];
+                            propsStr += prop;
+                            propsStr += (i + 1) < _this.params.length ? ',' : '';
+                        }
+                        return propsStr;
+                    };
+                    var props = parseProps();
+                    var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+                    this._polymerDecoratorSignature = comment;
+                    this._polymerDecoratorSignature += '\t\t\t@observe(\'';
+                    this._polymerDecoratorSignature += props ? props : '';
+                    this._polymerDecoratorSignature += '\')\n\t\t\t';
+                    this._polymerDecoratorSignature += this.method.polymerSignature;
+                }
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Observer.prototype, "polymerIronPageSignature", {
+            get: function () {
+                if (!this._polymerIronPageSignature && this.tsNode) {
+                    var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+                    this._polymerIronPageSignature = comment;
+                    this._polymerIronPageSignature += '\t\t\t\'' + this.methodName + '(';
+                    for (var i = 0; i < this.params.length; i++) {
+                        var prop = this.params[i];
+                        this._polymerIronPageSignature += prop;
+                        this._polymerIronPageSignature += (i + 1) < this.params.length ? ',' : '';
+                    }
+                    this._polymerIronPageSignature += ')\'';
+                }
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Observer.prototype, "polymerSignature", {
+            get: function () {
+                if (!this._polymerSignature && this.isComplex && this.method) {
+                    this._polymerSignature = this.method.polymerSignature;
+                }
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Observer;
     }(ProgramPart));
     RedPill.Observer = Observer;
@@ -1037,8 +1067,6 @@ var RedPill;
                 if (!this._params && this.tsNode) {
                     var insideProperty_2 = false;
                     var parseChildren_4 = function (childNode) {
-                        console.log('Property.params.parseChildren, childNode kind=', ts.SyntaxKind[childNode.kind]);
-                        console.log('Property.params.parseChildren, parentNode kind=', ts.SyntaxKind[childNode.parent.kind]);
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_2) {
@@ -1055,6 +1083,44 @@ var RedPill;
             },
             set: function (params) {
                 this._params = params;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                if (!this._polymerDecoratorSignature && this.tsNode) {
+                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerDecoratorSignature = comment;
+                    this._polymerDecoratorSignature += '\n' + this.tsNode.getText();
+                }
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "polymerIronPageSignature", {
+            get: function () {
+                if (!this._polymerIronPageSignature) {
+                    var objDecs = this.parseChildren(ts.SyntaxKind.ObjectLiteralExpression, false);
+                    if (objDecs && objDecs.length > 0) {
+                        var objDec = objDecs[0];
+                        var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                        var nameParts = this.name.split(':');
+                        this._polymerIronPageSignature = comment;
+                        this._polymerIronPageSignature += '\t\t\t' + nameParts[0];
+                        this._polymerIronPageSignature += ': ';
+                        this._polymerIronPageSignature += objDec.getText();
+                    }
+                }
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "polymerSignature", {
+            get: function () {
+                return this.polymerIronPageSignature;
             },
             enumerable: true,
             configurable: true
@@ -1154,138 +1220,27 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Property.prototype._parseParams = function () {
-            var partsArr = this.params ? this.params.split(',') : [];
-            var newParamStr = '{\n';
-            for (var i = 0; i < partsArr.length; i++) {
-                var part = partsArr[i];
-                if (this.containsValueFunction && part.indexOf('value:') > -1) {
-                    newParamStr += this._parseValueFunction(part);
-                    newParamStr += (i + 1) < partsArr.length ? ',\n' : '\n';
-                }
-                else if (this.containsValueObjectDeclaration && part.indexOf('value:') > -1) {
-                    newParamStr += '\t\t\t\t' + this._parseValueObject();
-                    var valueLen = this.valueObjectParams ? this.valueObjectParams.split(',').length - 1 : 0;
-                    newParamStr += (i + 1) < (partsArr.length - valueLen) ? ',\n' : '\n';
-                }
-                else if (this.containsValueArrayLiteral && part.indexOf('value:') > -1) {
-                    newParamStr += '\t\t\t\t' + this._parseValueArray();
-                    var valueLen = this.valueArrayParams ? this.valueArrayParams.split(',').length - 1 : 0;
-                    newParamStr += (i + 1) < (partsArr.length - valueLen) ? ',\n' : '\n';
-                }
-                else {
-                    var regEx = /[/{/}\n\t]/g;
-                    if (part.indexOf('type') > -1) {
-                        regEx = /[/{/}\n\t']/g;
-                    }
-                    if ((this.containsValueObjectDeclaration || this.containsValueArrayLiteral) && !this._isPartOfValue(part)) {
-                        newParamStr += '\t\t\t\t' + part.replace(regEx, '');
-                        newParamStr += (i + 1) < partsArr.length ? ',\n' : '\n';
-                    }
-                    else if (!this.containsValueObjectDeclaration && !this.containsValueArrayLiteral) {
-                        newParamStr += '\t\t\t\t' + part.replace(regEx, '');
-                        newParamStr += (i + 1) < partsArr.length ? ',\n' : '\n';
-                    }
-                }
-            }
-            newParamStr += '\t\t\t}';
-            return newParamStr;
-        };
-        Property.prototype._isPartOfValue = function (part) {
-            var partOfValue = false;
-            if (part && this.containsValueObjectDeclaration) {
-                var valueObj = getObjectFromString(this.valueObjectParams);
-                var partMatch = /(?:^[\{\s"]*([a-zA-Z0-9]+):(?:.)*)/.exec(part);
-                if (partMatch) {
-                    var key = partMatch[1];
-                    partOfValue = valueObj.hasOwnProperty(key);
-                }
-            }
-            else if (part && this.containsValueArrayLiteral) {
-                var valueArr = getArrayFromString(this.valueArrayParams);
-                var partMatch = /(?:['"\s]*([a-zA-Z]*)['"\s]*)/.exec(part);
-                if (partMatch && partMatch[1]) {
-                    var key = partMatch[1];
-                    partOfValue = valueArr.indexOf(key) > -1;
-                }
-            }
-            return partOfValue;
-        };
-        Property.prototype._parseValueArray = function () {
-            var valueArrStr = 'value: [';
-            var arrayParts = this.valueArrayParams.split(',');
-            for (var i = 1; i < arrayParts.length; i++) {
-                var part = arrayParts[i];
-                if (i === 1) {
-                    valueArrStr += '\n';
-                }
-                valueArrStr += '\t' + part.replace(/[\]\[\n]/g, '');
-                valueArrStr += (i + 1) < arrayParts.length ? ',\n' : '\n';
-            }
-            if (arrayParts.length > 1) {
-                valueArrStr += '\t\t\t\t]';
-            }
-            else {
-                valueArrStr += ']';
-            }
-            return valueArrStr;
-        };
-        Property.prototype._parseValueObject = function () {
-            var objStr = 'value: {';
-            var partsArr = this.valueObjectParams ? this.valueObjectParams.split(',') : [];
-            for (var i = 0; i < partsArr.length; i++) {
-                var part = partsArr[i];
-                if (i === 0) {
-                    objStr += '\n';
-                }
-                objStr += '\t\t\t\t\t' + part.replace(/[/{/}\n\t]/g, '');
-                objStr += (i + 1) < partsArr.length ? ',\n' : '\n';
-            }
-            if (partsArr.length > 1) {
-                objStr += '\t\t\t\t}';
-            }
-            else {
-                objStr += '}';
-            }
-            return objStr;
-        };
-        Property.prototype._parseValueFunction = function (valueFunctionPart) {
-            var funcStr = '';
-            if (valueFunctionPart) {
-                var funcArr_1 = valueFunctionPart.split('\n');
-                var idx_1 = 0;
-                funcArr_1.forEach(function (element) {
-                    if ((idx_1 === 0 && element) || (idx_1 === 1 && element)) {
-                        funcStr += '\t\t\t' + element.replace(/\n\t/g, '') + '\n';
-                    }
-                    else if (idx_1 === funcArr_1.length - 1) {
-                        funcStr += '\t' + element.replace(/\n\t/g, '');
-                    }
-                    else if (element) {
-                        funcStr += '\t' + element.replace(/\n\t/g, '') + '\n';
-                    }
-                    idx_1++;
-                });
-            }
-            return funcStr;
-        };
-        Property.prototype.toDocOnlyMarkup = function () {
-            var nameParts = this.name.split(':');
-            var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-            var propStr = comment;
-            propStr += '\t\t\t' + nameParts[0];
-            propStr += ': ';
-            propStr += this._parseParams();
-            return propStr;
-        };
         return Property;
     }(ProgramPart));
     RedPill.Property = Property;
     var ComputedProperty = (function (_super) {
         __extends(ComputedProperty, _super);
-        function ComputedProperty() {
-            return _super !== null && _super.apply(this, arguments) || this;
+        function ComputedProperty(node, component) {
+            var _this = _super.call(this) || this;
+            _this.tsNode = node;
+            _this.component = component;
+            return _this;
         }
+        Object.defineProperty(ComputedProperty.prototype, "component", {
+            get: function () {
+                return this._component;
+            },
+            set: function (component) {
+                this._component = component;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(ComputedProperty.prototype, "derivedMethodName", {
             get: function () {
                 if (!this._derivedMethodName && this.tsNode) {
@@ -1300,6 +1255,22 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ComputedProperty.prototype, "method", {
+            get: function () {
+                if (!this._method && this.tsNode) {
+                    if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
+                        var methodDecl = this.tsNode;
+                        this._method = new Function(methodDecl);
+                    }
+                }
+                return this._method;
+            },
+            set: function (method) {
+                this._method = method;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(ComputedProperty.prototype, "methodName", {
             get: function () {
                 if (!this._methodName && this.tsNode) {
@@ -1310,6 +1281,60 @@ var RedPill;
             },
             set: function (methodName) {
                 this._methodName = methodName;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
+            get: function () {
+                if (!this._polymerSignature && this.method) {
+                    this._polymerSignature = this.method.polymerSignature;
+                }
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorSignature", {
+            get: function () {
+                if (!this._polymerDecoratorSignature && this.method) {
+                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerDecoratorSignature = comment;
+                    this._polymerDecoratorSignature += '\t\t\t@computed(';
+                    var methodParams = this.method.parameters;
+                    for (var i = 0; i < methodParams.length; i++) {
+                        var param = methodParams[i];
+                        this._polymerDecoratorSignature += '\'' + param + '\'';
+                        if (i < (methodParams.length - 1)) {
+                            this._polymerDecoratorSignature += ',';
+                        }
+                    }
+                    this._polymerDecoratorSignature += ')\n\t\t\t';
+                    this._polymerDecoratorSignature += this.method.polymerSignature;
+                }
+                return this._polymerDecoratorSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerIronPageSignature", {
+            get: function () {
+                if (!this._polymerIronPageSignature && this.tsNode) {
+                    var nameParts = this.name.split(':');
+                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerIronPageSignature = comment;
+                    this._polymerIronPageSignature += '\t\t\t' + nameParts[0];
+                    this._polymerIronPageSignature += ': ';
+                    this._polymerIronPageSignature += this._getNewParams();
+                }
+                return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "propertyName", {
+            get: function () {
+                return this.methodName;
             },
             enumerable: true,
             configurable: true
@@ -1521,38 +1546,6 @@ var RedPill;
         return computedMethod;
     }
     RedPill.getMethodFromComputed = getMethodFromComputed;
-    function getMethodFromObserver(observer) {
-        var observerMethod = null;
-        if (observer) {
-            if (observer.methodName) {
-                observerMethod = new Function();
-                observerMethod.methodName = observer.methodName;
-                if (observer.properties && observer.properties.length > 0) {
-                    var paramArr = [];
-                    for (var i = 0; i < observer.properties.length; i++) {
-                        var prop = observer.properties[i];
-                        var propVal = null;
-                        if (prop.indexOf('.') > -1) {
-                            propVal = prop.split('.')[1];
-                        }
-                        else {
-                            propVal = prop;
-                        }
-                        paramArr.push(propVal);
-                    }
-                    observerMethod.parameters = paramArr;
-                }
-                observerMethod.comment = observer.comment || new Comment();
-                observerMethod.comment.isFor = ProgramType.Function;
-                if (!observer.comment) {
-                    observerMethod.comment.commentText = '';
-                }
-                observer.comment = null;
-            }
-        }
-        return observerMethod;
-    }
-    RedPill.getMethodFromObserver = getMethodFromObserver;
     function isComputedProperty(node) {
         var isComputed = false;
         if (node && node.decorators && node.decorators.length > 0) {

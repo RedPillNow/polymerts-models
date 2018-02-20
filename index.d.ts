@@ -51,6 +51,7 @@ export declare module RedPill {
         private _polymerIronPageSignature;
         private _properties;
         private _observers;
+        private _useMetadataReflection;
         constructor(node?: ts.ClassDeclaration);
         behaviors: IncludedBehavior[];
         className: string;
@@ -67,6 +68,7 @@ export declare module RedPill {
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         properties: Property[];
+        useMetadataReflection: boolean;
     }
     enum ProgramType {
         Property = "PROPERTY",

@@ -205,6 +205,7 @@ var RedPill;
         __extends(Component, _super);
         function Component(node) {
             var _this = _super.call(this) || this;
+            _this._useMetadataReflection = false;
             _this.tsNode = node;
             return _this;
         }
@@ -443,6 +444,16 @@ var RedPill;
             },
             set: function (properties) {
                 this._properties = properties;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "useMetadataReflection", {
+            get: function () {
+                return this._useMetadataReflection;
+            },
+            set: function (useMetadataReflection) {
+                this._useMetadataReflection = useMetadataReflection;
             },
             enumerable: true,
             configurable: true
@@ -949,7 +960,10 @@ var RedPill;
                     this._polymerDecoratorSignature += '\t\t\t@observe(\'';
                     this._polymerDecoratorSignature += props ? props : '';
                     this._polymerDecoratorSignature += '\')\n\t\t\t';
-                    this._polymerDecoratorSignature += this.method.polymerSignature;
+                    this._polymerDecoratorSignature += trimAllWhitespace(this.method.polymerSignature);
+                }
+                else if (!this.isComplex) {
+                    this.addWarning('Observer.polymerDecoratorSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should just be defined in a declared property');
                 }
                 return this._polymerDecoratorSignature;
             },
@@ -978,6 +992,9 @@ var RedPill;
             get: function () {
                 if (!this._polymerSignature && this.isComplex && this.method) {
                     this._polymerSignature = this.method.polymerSignature;
+                }
+                else if (!this.isComplex) {
+                    this.addWarning('Observer.polymerSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should be just be added to a declared property');
                 }
                 return this._polymerSignature;
             },
@@ -1125,7 +1142,7 @@ var RedPill;
                 if (!this._polymerDecoratorSignature && this.tsNode) {
                     var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
                     this._polymerDecoratorSignature = comment;
-                    this._polymerDecoratorSignature += '\n' + this.tsNode.getText();
+                    this._polymerDecoratorSignature += '\n\t\t\t' + this.tsNode.getText();
                 }
                 return this._polymerDecoratorSignature;
             },

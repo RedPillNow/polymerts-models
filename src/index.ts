@@ -257,6 +257,7 @@ export module RedPill {
 		private _polymerIronPageSignature: string;
 		private _properties: Property[];
 		private _observers: Observer[];
+		private _useMetadataReflection: boolean = false;
 
 		constructor(node?: ts.ClassDeclaration) {
 			super();
@@ -520,6 +521,17 @@ export module RedPill {
 
 		set properties(properties) {
 			this._properties = properties;
+		}
+		/**
+		 * Set to true to honor patterns for the Metadata Reflection API
+		 * @type {boolean}
+		 */
+		get useMetadataReflection(): boolean {
+			return this._useMetadataReflection;
+		}
+
+		set useMetadataReflection(useMetadataReflection) {
+			this._useMetadataReflection = useMetadataReflection;
 		}
 
 		/* protected _writeDocObservers(): string {
@@ -932,14 +944,6 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this._polymerSignature;
-		}
-		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification
 		 * @readonly
@@ -956,6 +960,14 @@ export module RedPill {
 		 */
 		get polymerIronPageSignature() {
 			return this._polymerIronPageSignature;
+		}
+		/**
+		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerSignature() {
+			return this._polymerSignature;
 		}
 
 		toDocOnlyMarkup() {
@@ -1105,7 +1117,7 @@ export module RedPill {
 				this._polymerDecoratorSignature += '\t\t\t@observe(\'';
 				this._polymerDecoratorSignature += props ? props : '';
 				this._polymerDecoratorSignature += '\')\n\t\t\t';
-				this._polymerDecoratorSignature += this.method.polymerSignature;
+				this._polymerDecoratorSignature += trimAllWhitespace(this.method.polymerSignature);
 			} else if (!this.isComplex) {
 				this.addWarning('Observer.polymerDecoratorSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should just be defined in a declared property');
 			}

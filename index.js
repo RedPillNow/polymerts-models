@@ -393,7 +393,7 @@ var RedPill;
                     for (var i = 0; i < obsDeclarations.length; i++) {
                         var obsNode = obsDeclarations[i];
                         if (isObserver(obsNode)) {
-                            var observer = new Observer(obsNode);
+                            var observer = new Observer(obsNode, this);
                             obs.push(observer);
                         }
                     }
@@ -407,15 +407,23 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Component.prototype, "polymerSignature", {
-            get: function () {
-                return this._polymerSignature;
-            },
-            enumerable: true,
-            configurable: true
-        });
         Object.defineProperty(Component.prototype, "polymerDecoratorSignature", {
             get: function () {
+                if (!this._polymerDecoratorSignature) {
+                    var comment = this.comment && this.comment.commentText ? this.comment.commentText : '';
+                    this._polymerDecoratorSignature = comment;
+                    this._polymerDecoratorSignature += '@customElement(\'' + this.name + '\')\n';
+                    this._polymerDecoratorSignature += 'export class ' + this.className + ' extends ';
+                    var extendsClass = this.extendsClass === 'polymer.Base' ? 'Polymer.Element' : this.extendsClass;
+                    var extendStatement = extendsClass + ' {\n';
+                    if (this.listeners) {
+                        extendStatement = 'Polymer.GestureEventListeners(';
+                        extendStatement += 'Polymer.DeclarativeEventListeners(';
+                        extendStatement += extendsClass + ')) {\n';
+                    }
+                    this._polymerDecoratorSignature += extendStatement;
+                    this._polymerDecoratorSignature += 'static is = \'' + this.name + '\';\n';
+                }
                 return this._polymerDecoratorSignature;
             },
             enumerable: true,
@@ -424,6 +432,13 @@ var RedPill;
         Object.defineProperty(Component.prototype, "polymerIronPageSignature", {
             get: function () {
                 return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
             },
             enumerable: true,
             configurable: true
@@ -717,6 +732,7 @@ var RedPill;
                 if (!this._elementId && !this.isExpression && this.tsNode) {
                     var sigArr = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
                     this._elementId = this.eventName ? sigArr[0] : null;
+                    this._elementId = this._elementId.replace(/['"`]/g, '');
                 }
                 return this._elementId;
             },
@@ -737,11 +753,11 @@ var RedPill;
                                 switch (decoratorChildNode.kind) {
                                     case ts.SyntaxKind.StringLiteral:
                                         var listenerStrNode = decoratorChildNode;
-                                        _this._eventDeclaration = listenerStrNode.getText();
+                                        _this._eventDeclaration = listenerStrNode.getText().replace(/['"`]/g, '');
                                         break;
                                     case ts.SyntaxKind.PropertyAccessExpression:
                                         var listenerPropAccExp = decoratorChildNode;
-                                        _this._eventDeclaration = listenerPropAccExp.getText();
+                                        _this._eventDeclaration = listenerPropAccExp.getText().replace(/['"`]/g, '');
                                         break;
                                 }
                                 ;
@@ -764,6 +780,7 @@ var RedPill;
                 if (!this._eventName && this.tsNode) {
                     var sigArr = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
                     this._eventName = sigArr[1] || null;
+                    this._eventName = this._eventName.replace(/['"`]/g, '');
                 }
                 return this._eventName;
             },
@@ -800,6 +817,22 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Listener.prototype, "method", {
+            get: function () {
+                if (!this._method && this.tsNode) {
+                    if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
+                        var methodDecl = this.tsNode;
+                        this._method = new Function(methodDecl);
+                    }
+                }
+                return this._method;
+            },
+            set: function (method) {
+                this._method = method;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Listener.prototype, "methodName", {
             get: function () {
                 if (!this._methodName && this.tsNode) {
@@ -814,15 +847,85 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Listener.prototype, "polymerSignature", {
+        Object.defineProperty(Listener.prototype, "polymerAddListenerSignature", {
             get: function () {
-                return this._polymerSignature;
+                if (!this._polymerAddListenerSignature && this.method) {
+                    if (this.elementId) {
+                        this._polymerAddListenerSignature = 'this.$.' + this.elementId + '.addEventListener(';
+                    }
+                    else {
+                        this.addWarning('Listener.polymerAddListenerSignature: Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to \'this\'.');
+                        this._polymerAddListenerSignature = 'this.addEventListener(';
+                    }
+                    if (!this.isExpression) {
+                        this._polymerAddListenerSignature += '\'';
+                        this._polymerAddListenerSignature += this.eventName;
+                        this._polymerAddListenerSignature += '\',';
+                    }
+                    else {
+                        this._polymerAddListenerSignature += this.eventDeclaration;
+                        this._polymerAddListenerSignature += ',';
+                    }
+                    this._polymerAddListenerSignature += 'this.' + this.methodName;
+                    this._polymerAddListenerSignature += ');';
+                }
+                return this._polymerAddListenerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Listener.prototype, "polymerRemoveListenerSignature", {
+            get: function () {
+                if (!this._polymerRemoveListenerSignature && this.method) {
+                    if (this.elementId) {
+                        this._polymerRemoveListenerSignature = 'this.$.' + this.elementId + '.removeEventListener(';
+                    }
+                    else {
+                        this.addWarning('Listener.polymerRemoveListenerSignature: Remove Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to \'this\'.');
+                        this._polymerRemoveListenerSignature = 'this.removeEventListener(';
+                    }
+                    if (!this.isExpression) {
+                        this._polymerRemoveListenerSignature += '\'';
+                        this._polymerRemoveListenerSignature += this.eventName;
+                        this._polymerRemoveListenerSignature += '\',';
+                    }
+                    else {
+                        this._polymerRemoveListenerSignature += this.eventDeclaration;
+                        this._polymerRemoveListenerSignature += ',';
+                    }
+                    this._polymerRemoveListenerSignature += 'this.' + this.methodName;
+                    this._polymerRemoveListenerSignature += ');';
+                }
+                return this._polymerRemoveListenerSignature;
             },
             enumerable: true,
             configurable: true
         });
         Object.defineProperty(Listener.prototype, "polymerDecoratorSignature", {
             get: function () {
+                if (!this._polymerDecoratorSignature && this.method) {
+                    var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+                    this._polymerDecoratorSignature = comment;
+                    this._polymerDecoratorSignature += '@listen(';
+                    if (this.isExpression) {
+                        this._polymerDecoratorSignature += this.eventDeclaration;
+                    }
+                    else {
+                        this._polymerDecoratorSignature += '\'';
+                        this._polymerDecoratorSignature += this.eventName;
+                        this._polymerDecoratorSignature += '\'';
+                    }
+                    this._polymerDecoratorSignature += ',\'';
+                    if (this.elementId) {
+                        this._polymerDecoratorSignature += this.elementId + '\'';
+                    }
+                    else {
+                        this._polymerDecoratorSignature += 'document\'';
+                        this.addWarning('Listener.polymerDecoratorSignature: Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to document.');
+                    }
+                    this._polymerDecoratorSignature += ')\n\t\t\t';
+                    this._polymerDecoratorSignature += this.method.polymerSignature;
+                }
                 return this._polymerDecoratorSignature;
             },
             enumerable: true,
@@ -830,31 +933,42 @@ var RedPill;
         });
         Object.defineProperty(Listener.prototype, "polymerIronPageSignature", {
             get: function () {
+                if (!this._polymerIronPageSignature) {
+                }
                 return this._polymerIronPageSignature;
             },
             enumerable: true,
             configurable: true
         });
-        Listener.prototype.toDocOnlyMarkup = function () {
-            var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-            var listenerStr = comment;
-            var eventName = this.eventDeclaration ? this.eventDeclaration.replace(/['"]/g, '') : '';
-            listenerStr += '\t\t\t\'' + eventName + '\'';
-            listenerStr += ': ';
-            listenerStr += '\'' + this.methodName + '\'';
-            return listenerStr;
-        };
+        Object.defineProperty(Listener.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Listener;
     }(ProgramPart));
     RedPill.Listener = Listener;
     var Observer = (function (_super) {
         __extends(Observer, _super);
-        function Observer(node) {
+        function Observer(node, component) {
             var _this = _super.call(this) || this;
             _this._isComplex = false;
             _this.tsNode = node;
+            _this.component = component;
             return _this;
         }
+        Object.defineProperty(Observer.prototype, "component", {
+            get: function () {
+                return this._component;
+            },
+            set: function (component) {
+                this._component = component;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Observer.prototype, "isComplex", {
             get: function () {
                 var _this = this;
@@ -908,6 +1022,33 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Observer.prototype, "observerPropertySignature", {
+            get: function () {
+                var _this = this;
+                if (!this._observerPropertySignature && this.component && !this.isComplex) {
+                    var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+                    this._observerPropertySignature = comment;
+                    var property = this.component.properties.find(function (prop) {
+                        if (prop.name && prop.name === _this.params[0]) {
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (property) {
+                        var propObj = getObjectFromString(property.params);
+                        propObj.observer = this.methodName;
+                        this._observerPropertySignature += '\t\t\t@property(';
+                        this._observerPropertySignature += getStringFromObject(propObj);
+                        this._observerPropertySignature += ')\n';
+                        this._observerPropertySignature += this.params[0];
+                        this._observerPropertySignature += ': ' + getTypescriptType(property) + ';';
+                    }
+                }
+                return this._observerPropertySignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Observer.prototype, "params", {
             get: function () {
                 if (!this._params && this.tsNode) {
@@ -949,7 +1090,7 @@ var RedPill;
                         var propsStr = '';
                         for (var i = 0; i < _this.params.length; i++) {
                             var prop = _this.params[i];
-                            propsStr += prop;
+                            propsStr += '\'' + prop + '\'';
                             propsStr += (i + 1) < _this.params.length ? ',' : '';
                         }
                         return propsStr;
@@ -957,7 +1098,7 @@ var RedPill;
                     var props = parseProps();
                     var comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
                     this._polymerDecoratorSignature = comment;
-                    this._polymerDecoratorSignature += '\t\t\t@observe(\'';
+                    this._polymerDecoratorSignature += '\t\t\t@observe(';
                     this._polymerDecoratorSignature += props ? props : '';
                     this._polymerDecoratorSignature += '\')\n\t\t\t';
                     this._polymerDecoratorSignature += trimAllWhitespace(this.method.polymerSignature);
@@ -1435,16 +1576,6 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
-            get: function () {
-                if (!this._polymerSignature && this.method) {
-                    this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
-                }
-                return this._polymerSignature;
-            },
-            enumerable: true,
-            configurable: true
-        });
         Object.defineProperty(ComputedProperty.prototype, "polymerIronPageSignature", {
             get: function () {
                 if (!this._polymerIronPageSignature && this.tsNode) {
@@ -1456,6 +1587,16 @@ var RedPill;
                     this._polymerIronPageSignature += this._getNewParams();
                 }
                 return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
+            get: function () {
+                if (!this._polymerSignature && this.method) {
+                    this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+                }
+                return this._polymerSignature;
             },
             enumerable: true,
             configurable: true
@@ -1704,6 +1845,34 @@ var RedPill;
         return isObserver;
     }
     RedPill.isObserver = isObserver;
+    function getTypescriptType(property) {
+        var returnVal = 'any';
+        if (property && property.type) {
+            switch (property.type.toLowerCase()) {
+                case 'array':
+                    returnVal = 'any[]';
+                    break;
+                case 'object':
+                    returnVal = 'any';
+                    break;
+                case 'function':
+                    returnVal = 'any';
+                    break;
+                case 'string':
+                    returnVal = 'string';
+                    break;
+                case 'number':
+                    returnVal = 'number';
+                    break;
+                case 'boolean':
+                    returnVal = 'boolean';
+                    break;
+            }
+            ;
+        }
+        return returnVal;
+    }
+    RedPill.getTypescriptType = getTypescriptType;
 })(RedPill = exports.RedPill || (exports.RedPill = {}));
 exports.default = { RedPill: RedPill };
 //# sourceMappingURL=index.js.map

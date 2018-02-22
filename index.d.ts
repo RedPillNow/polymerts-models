@@ -64,9 +64,9 @@ export declare module RedPill {
         name: string;
         namespace: string;
         observers: Observer[];
-        readonly polymerSignature: string;
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
+        readonly polymerSignature: string;
         properties: Property[];
         useMetadataReflection: boolean;
     }
@@ -120,22 +120,28 @@ export declare module RedPill {
         private _eventName;
         private _eventDeclaration;
         private _isExpression;
+        private _method;
         private _methodName;
         private _polymerDecoratorSignature;
         private _polymerSignature;
         private _polymerIronPageSignature;
+        private _polymerAddListenerSignature;
+        private _polymerRemoveListenerSignature;
         constructor(node?: ts.Node);
         elementId: string;
         eventDeclaration: string;
         eventName: string;
         isExpression: boolean;
+        method: Function;
         methodName: string;
-        readonly polymerSignature: string;
+        readonly polymerAddListenerSignature: string;
+        readonly polymerRemoveListenerSignature: string;
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        toDocOnlyMarkup(): string;
+        readonly polymerSignature: string;
     }
     class Observer extends ProgramPart {
+        private _component;
         private _isComplex;
         private _method;
         private _methodName;
@@ -143,12 +149,13 @@ export declare module RedPill {
         private _polymerDecoratorSignature;
         private _polymerSignature;
         private _polymerIronPageSignature;
-        private _observerArrayEntrySignature;
         private _observerPropertySignature;
-        constructor(node?: ts.Node);
+        constructor(node?: ts.Node, component?: Component);
+        component: Component;
         isComplex: boolean;
         method: Function;
         methodName: string;
+        readonly observerPropertySignature: string;
         params: string[];
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
@@ -200,8 +207,8 @@ export declare module RedPill {
         readonly polymerDecoratedPropertySignature: string;
         readonly polymerDecoratorSignature: string;
         readonly polymerDecoratorTypedSignature: string;
-        readonly polymerSignature: string;
         readonly polymerIronPageSignature: string;
+        readonly polymerSignature: string;
         readonly propertyName: string;
         private _getNewParams();
     }
@@ -230,6 +237,7 @@ export declare module RedPill {
     function isComputedProperty(node: ts.MethodDeclaration): boolean;
     function isListener(node: ts.MethodDeclaration): boolean;
     function isObserver(node: ts.MethodDeclaration): boolean;
+    function getTypescriptType(property: Property): string;
 }
 declare const _default: {
     RedPill: typeof RedPill;

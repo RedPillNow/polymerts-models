@@ -349,6 +349,9 @@ export module RedPill {
 		 * @type {string}
 		 */
 		get extendsClass(): string {
+			if (!this._extendsClass && this.tsNode) {
+
+			}
 			return this._extendsClass;
 		}
 
@@ -461,7 +464,7 @@ export module RedPill {
 				for (let i = 0; i < obsDeclarations.length; i++) {
 					let obsNode = obsDeclarations[i];
 					if (isObserver(obsNode)) {
-						let observer = new Observer(obsNode);
+						let observer = new Observer(obsNode, this);
 						obs.push(observer);
 					}
 				}
@@ -474,20 +477,28 @@ export module RedPill {
 			this._observers = observers;
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this._polymerSignature;
-		}
-		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification
 		 * @readonly
 		 * @type {string}
 		 */
 		get polymerDecoratorSignature(): string {
+			if (!this._polymerDecoratorSignature) {
+				let comment = this.comment && this.comment.commentText ? this.comment.toDocOnlyMarkup() : '';
+				this._polymerDecoratorSignature = comment;
+				this._polymerDecoratorSignature += '@customElement(\'' + this.name + '\')\n';
+				this._polymerDecoratorSignature += 'export class ' + this.className + ' extends ';
+				let extendsClass = this.extendsClass === 'polymer.Base' ? 'Polymer.Element' : this.extendsClass;
+				let extendStatement = extendsClass + ' {\n';
+				if (this.listeners) {
+					extendStatement = 'Polymer.GestureEventListeners(';
+					extendStatement += 'Polymer.DeclarativeEventListeners(';
+					extendStatement += extendsClass + ')) {\n'
+				}
+				this._polymerDecoratorSignature += extendStatement;
+				this._polymerDecoratorSignature += 'static is = \'' + this.name + '\';\n';
+
+			}
 			return this._polymerDecoratorSignature;
 		}
 		/**
@@ -498,6 +509,14 @@ export module RedPill {
 		 */
 		get polymerIronPageSignature() {
 			return this._polymerIronPageSignature;
+		}
+		/**
+		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerSignature() {
+			return this._polymerSignature;
 		}
 		/**
 		 * The declared properties of this component class. If a property is
@@ -741,6 +760,9 @@ export module RedPill {
 		}
 		/**
 		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * ```typescript
+		 * someFunc(arg1) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -760,6 +782,9 @@ export module RedPill {
 		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification
+		 * ```typescript
+		 * someFunc(arg1) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -769,6 +794,9 @@ export module RedPill {
 		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
+		 * ```typescript
+		 * someFunc(arg1) {}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -830,10 +858,13 @@ export module RedPill {
 		private _eventName: string;
 		private _eventDeclaration: string;
 		private _isExpression: boolean = false;
+		private _method: Function;
 		private _methodName: string;
 		private _polymerDecoratorSignature: string;
 		private _polymerSignature: string;
 		private _polymerIronPageSignature: string;
+		private _polymerAddListenerSignature: string;
+		private _polymerRemoveListenerSignature: string;
 
 		constructor(node?: ts.Node) {
 			super();
@@ -847,6 +878,7 @@ export module RedPill {
 			if (!this._elementId && !this.isExpression && this.tsNode) {
 				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
 				this._elementId = this.eventName ? sigArr[0] : null;
+				this._elementId = this._elementId.replace(/['"`]/g, '');
 			}
 			return this._elementId;
 		}
@@ -867,11 +899,11 @@ export module RedPill {
 							switch (decoratorChildNode.kind) {
 								case ts.SyntaxKind.StringLiteral:
 									let listenerStrNode = <ts.StringLiteral>decoratorChildNode;
-									this._eventDeclaration = listenerStrNode.getText();
+									this._eventDeclaration = listenerStrNode.getText().replace(/['"`]/g,'');
 									break;
 								case ts.SyntaxKind.PropertyAccessExpression:
 									let listenerPropAccExp = <ts.PropertyAccessExpression>decoratorChildNode;
-									this._eventDeclaration = listenerPropAccExp.getText();
+									this._eventDeclaration = listenerPropAccExp.getText().replace(/['"`]/g,'');
 									break;
 							};
 							ts.forEachChild(decoratorChildNode, parseChildren);
@@ -895,6 +927,7 @@ export module RedPill {
 			if (!this._eventName && this.tsNode) {
 				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
 				this._eventName = sigArr[1] || null;
+				this._eventName = this._eventName.replace(/['"`]/g, '');
 			}
 			return this._eventName;
 		}
@@ -928,6 +961,20 @@ export module RedPill {
 		set isExpression(isExpression) {
 			this._isExpression = isExpression;
 		}
+
+		get method(): Function {
+			if (!this._method && this.tsNode) {
+				if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
+					let methodDecl = <ts.MethodDeclaration>this.tsNode;
+					this._method = new Function(methodDecl);
+				}
+			}
+			return this._method;
+		}
+
+		set method(method) {
+			this._method = method;
+		}
 		/**
 		 * The name of the handler for this listener
 		 * @type {string}
@@ -944,12 +991,111 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		/**
+		 * Generates markup which can be used in just a plain-jane polymer element. In this
+		 * case it will be an addEventListener statement that should be placed in the
+		 * connectedCallback
+		 * @example
+		 * ```javascript
+		 * this.addEventListener('click', this._onClick);
+		 * // on child element
+		 * childElement.addEventListener('click', this._onClick);
+		 * ```
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerAddListenerSignature(): string {
+			if (!this._polymerAddListenerSignature && this.method) {
+				if (this.elementId) {
+					this._polymerAddListenerSignature = 'this.$.' + this.elementId + '.addEventListener(';
+				}else {
+					this.addWarning('Listener.polymerAddListenerSignature: Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to \'this\'.');
+					this._polymerAddListenerSignature = 'this.addEventListener(';
+				}
+				if (!this.isExpression) {
+					this._polymerAddListenerSignature += '\'';
+					this._polymerAddListenerSignature += this.eventName;
+					this._polymerAddListenerSignature += '\',';
+				}else {
+					this._polymerAddListenerSignature += this.eventDeclaration;
+					this._polymerAddListenerSignature += ',';
+				}
+				this._polymerAddListenerSignature += 'this.' + this.methodName;
+				this._polymerAddListenerSignature += ');';
+			}
+			return this._polymerAddListenerSignature;
+		}
+		/**
+		 * Generates markup which can be used in a plain-jane polymer element. Will
+		 * produce a removeEventListener statement
+		 * @example
+		 * ```javascript
+		 * this.removeEventListener('click', this._onClick);
+		 * // on a child element
+		 * childElement.removeEventListener('click', this._onClick);
+		 * ```
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerRemoveListenerSignature(): string {
+			if (!this._polymerRemoveListenerSignature && this.method) {
+				if (this.elementId) {
+					this._polymerRemoveListenerSignature = 'this.$.' + this.elementId + '.removeEventListener(';
+				}else {
+					this.addWarning('Listener.polymerRemoveListenerSignature: Remove Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to \'this\'.');
+					this._polymerRemoveListenerSignature = 'this.removeEventListener(';
+				}
+				if (!this.isExpression) {
+					this._polymerRemoveListenerSignature += '\'';
+					this._polymerRemoveListenerSignature += this.eventName;
+					this._polymerRemoveListenerSignature += '\',';
+				}else {
+					this._polymerRemoveListenerSignature += this.eventDeclaration;
+					this._polymerRemoveListenerSignature += ',';
+				}
+				this._polymerRemoveListenerSignature += 'this.' + this.methodName;
+				this._polymerRemoveListenerSignature += ');';
+			}
+			return this._polymerRemoveListenerSignature;
+		}
+		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification
+		 * @example
+		 * ```typescript
+		 * @listen('click', 'document')
+		 * _onClick(evt) {...}
+		 *
+		 * @listen('some-custom-event', 'elementId')
+		 * _onCustomEvt(evt) {...}
+		 *
+		 * @listen(Namespace.EventName, 'elementId')
+		 * _onEventName(evt) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
 		get polymerDecoratorSignature(): string {
+			if (!this._polymerDecoratorSignature && this.method) {
+				let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+				this._polymerDecoratorSignature = comment;
+				this._polymerDecoratorSignature += '@listen(';
+				if (this.isExpression) {
+					this._polymerDecoratorSignature += this.eventDeclaration;
+				}else {
+					this._polymerDecoratorSignature += '\'';
+					this._polymerDecoratorSignature += this.eventName;
+					this._polymerDecoratorSignature += '\'';
+				}
+				this._polymerDecoratorSignature += ',\'';
+				if (this.elementId) {
+					this._polymerDecoratorSignature += this.elementId + '\'';
+				}else {
+					this._polymerDecoratorSignature += 'document\'';
+					this.addWarning('Listener.polymerDecoratorSignature: Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to document.');
+				}
+				this._polymerDecoratorSignature += ')\n\t\t\t';
+				this._polymerDecoratorSignature += this.method.polymerSignature;
+			}
 			return this._polymerDecoratorSignature;
 		}
 		/**
@@ -959,25 +1105,19 @@ export module RedPill {
 		 * @type {string}
 		 */
 		get polymerIronPageSignature() {
+			if (!this._polymerIronPageSignature) {
+
+			}
 			return this._polymerIronPageSignature;
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * This isn't really valid but required for the abstract class. Use
+		 * polymerAddListenerSignature instead
 		 * @readonly
 		 * @type {string}
 		 */
 		get polymerSignature() {
 			return this._polymerSignature;
-		}
-
-		toDocOnlyMarkup() {
-			let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-			let listenerStr = comment;
-			let eventName = this.eventDeclaration ? this.eventDeclaration.replace(/['"]/g, '') : '';
-			listenerStr += '\t\t\t\'' + eventName + '\'';
-			listenerStr += ': ';
-			listenerStr += '\'' + this.methodName + '\'';
-			return listenerStr;
 		}
 	}
 	/**
@@ -988,6 +1128,7 @@ export module RedPill {
 	 * @extends {ProgramPart}
 	 */
 	export class Observer extends ProgramPart {
+		private _component: Component;
 		private _isComplex: boolean = false;
 		private _method: Function;
 		private _methodName: string;
@@ -995,12 +1136,20 @@ export module RedPill {
 		private _polymerDecoratorSignature: string;
 		private _polymerSignature: string;
 		private _polymerIronPageSignature: string;
-		private _observerArrayEntrySignature: string; // TODO
-		private _observerPropertySignature: string; // TODO
+		private _observerPropertySignature: string;
 
-		constructor(node?: ts.Node) {
+		constructor(node?: ts.Node, component?: Component) {
 			super();
 			this.tsNode = node;
+			this.component = component;
+		}
+
+		get component() {
+			return this._component;
+		}
+
+		set component(component) {
+			this._component = component;
 		}
 		/**
 		 * True if the observer declaration is for an object property or more
@@ -1060,6 +1209,48 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		/**
+		 * Generate a property with an observer parameter which points
+		 * to the observer method
+		 * @example
+		 * ```typescript
+		 *
+		 * // PolymerTS Observer
+		 * @observe('prop1')
+		 * _onProp1(prop1) {...}
+		 *
+		 * // Above converted to:
+		 * @property({
+		 * 	type: String,
+		 * 	observer: '_onProp1'
+		 * })
+		 * prop1: string;
+		 * ```
+		 * @readonly
+		 * @type {string}
+		 */
+		get observerPropertySignature(): string {
+			if (!this._observerPropertySignature && this.component && !this.isComplex) {
+				let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
+				this._observerPropertySignature = comment;
+				let property = this.component.properties.find((prop) => {
+					if (prop.name && prop.name === this.params[0]) {
+						return true;
+					}
+					return false;
+				});
+				if (property) {
+					let propObj = getObjectFromString(property.params);
+					propObj.observer = this.methodName;
+					this._observerPropertySignature += '\t\t\t@property('
+					this._observerPropertySignature += getStringFromObject(propObj);
+					this._observerPropertySignature += ')\n';
+					this._observerPropertySignature += this.params[0];
+					this._observerPropertySignature += ': ' + getTypescriptType(property) + ';';
+				}
+			}
+			return this._observerPropertySignature
+		}
+		/**
 		 * Array of properties this observer listens to
 		 * @type {string[]}
 		 */
@@ -1097,6 +1288,25 @@ export module RedPill {
 		 * specification. If this observer is a complex observer
 		 * (isComplex = true) will output the proper decorator and function.
 		 * Otherwill will be undefined
+		 * @example
+		 * ```typescript
+		 *
+		 * // PolymerTS Observer
+		 * @observe('prop1, prop2')
+		 * _onProp1Prop2(prop1, prop2) {...}
+		 *
+		 * // Above converted to
+		 * @observe('prop1','prop2')
+		 * _onProp1Prop2(prop1,prop2) {...}
+		 *
+		 * // PolymerTS Observer
+		 * @observe('prop1.*')
+		 * _onProp1Child(changeRecord) {...}
+		 *
+		 * // Above converted to
+		 * @observe('prop1.*')
+		 * _onProp1Child(changeRecord) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1106,7 +1316,7 @@ export module RedPill {
 					let propsStr = '';
 					for (let i = 0; i < this.params.length; i++) {
 						let prop = this.params[i];
-						propsStr += prop;
+						propsStr += '\'' + prop + '\'';
 						propsStr += (i + 1) < this.params.length ? ',' : '';
 					}
 					return propsStr;
@@ -1114,7 +1324,7 @@ export module RedPill {
 				let props = parseProps();
 				let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
 				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '\t\t\t@observe(\'';
+				this._polymerDecoratorSignature += '\t\t\t@observe(';
 				this._polymerDecoratorSignature += props ? props : '';
 				this._polymerDecoratorSignature += '\')\n\t\t\t';
 				this._polymerDecoratorSignature += trimAllWhitespace(this.method.polymerSignature);
@@ -1126,6 +1336,10 @@ export module RedPill {
 		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
+		 * @example
+		 * ```typescript
+		 * _onProp1(prop1) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1146,6 +1360,11 @@ export module RedPill {
 		/**
 		 * Generates markup which can be used to in just a plain-jane polymer element.
 		 * This will only happen if this is a complex observer (isComplex = true)
+		 * @example
+		 * ```typescript
+		 *
+		 * _onProp1(prop1, prop2) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1311,6 +1530,19 @@ export module RedPill {
 		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification.
+		 * @example
+		 * ```typescript
+		 * @property({
+		 * 	type: String
+		 * })
+		 * prop1: string;
+		 *
+		 * @property({
+		 * 	type: Object,
+		 * 	value: {foo: 'bar'}
+		 * })
+		 * prop2: string;
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1325,6 +1557,17 @@ export module RedPill {
 		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
+		 * @example
+		 * ```typescript
+		 * prop1: {
+		 * 	type: String
+		 * }
+		 *
+		 * prop2: {
+		 * 	type: Object,
+		 * 	value: {foo: 'bar'}
+		 * }
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1345,6 +1588,17 @@ export module RedPill {
 		}
 		/**
 		 * Generates markup which can be used to in just a plain-jane polymer element
+		 * @example
+		 * ```typescript
+		 * prop1: {
+		 * 	type: String
+		 * }
+		 *
+		 * prop2: {
+		 * 	type: Object,
+		 * 	value: {foo: 'bar'}
+		 * }
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1535,6 +1789,17 @@ export module RedPill {
 		/**
 		 * Use this to get a decorated property with the computed
 		 * parameter defined
+		 * @example
+		 * ```typescript
+		 *
+		 * @property({
+		 * 	type: String,
+		 * 	computed: '_getProp1(prop2)';
+		 * })
+		 * prop1: string;
+		 * get _getProp1(prop2) {...}
+		 *
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1571,6 +1836,15 @@ export module RedPill {
 		/**
 		 * Generates markup which aligns with the polymer-decorators
 		 * specification
+		 * @example
+		 * ```typescript
+		 *
+		 * @computed<ClassName>('prop2')
+		 * get prop1(prop2) {...}
+		 *
+		 * @computed<ClassName>('prop2', 'prop3')
+		 * get prop1(prop2, prop3) {...}
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1601,9 +1875,10 @@ export module RedPill {
 		 * Generate a typed signature with decorator
 		 * @example
 		 * ```typescript
+		 *
 		 * @computed<MyElement>('foo', 'bar')
 		 * @property({type: String})
-		 * get fooBar() {...}
+		 * get fooBar(foo, bar) {...}
 		 * ```
 		 * @readonly
 		 * @type {string}
@@ -1642,19 +1917,16 @@ export module RedPill {
 			return this._polymerDecoratorTypedSignature;
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			if (!this._polymerSignature && this.method) {
-				this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
-			}
-			return this._polymerSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
+		 * @example
+		 * ```typescript
+		 *
+		 * prop1: {
+		 * 	type: String
+		 * 	computed: 'getProp1'
+		 * }
+		 * ```
 		 * @readonly
 		 * @type {string}
 		 */
@@ -1668,6 +1940,22 @@ export module RedPill {
 				this._polymerIronPageSignature += this._getNewParams();
 			}
 			return this._polymerIronPageSignature;
+		}
+		/**
+		 * Generates markup which can be used in just a plain-jane polymer element
+		 * @example
+		 * ```typescript
+		 *
+		 * get _prop1(prop2) {...}
+		 * ```
+		 * @readonly
+		 * @type {string}
+		 */
+		get polymerSignature() {
+			if (!this._polymerSignature && this.method) {
+				this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+			}
+			return this._polymerSignature;
 		}
 		/**
 		 * The property name for this computed property. We just return
@@ -2051,6 +2339,38 @@ export module RedPill {
 			});
 		}
 		return isObserver;
+	}
+	/**
+	 * Determine the TypeScript type of a property
+	 * @export
+	 * @param {Property} property
+	 * @returns {string}
+	 */
+	export function getTypescriptType(property: Property): string {
+		let returnVal = 'any';
+		if (property && property.type) {
+			switch (property.type.toLowerCase()) {
+				case 'array':
+					returnVal = 'any[]';
+					break;
+				case 'object':
+					returnVal = 'any';
+					break;
+				case 'function':
+					returnVal = 'any';
+					break;
+				case 'string':
+					returnVal = 'string';
+					break;
+				case 'number':
+					returnVal = 'number';
+					break;
+				case 'boolean':
+					returnVal = 'boolean';
+					break;
+			};
+		}
+		return returnVal;
 	}
 }
 export default {RedPill};

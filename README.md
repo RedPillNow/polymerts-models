@@ -12,6 +12,7 @@ The following projects are used by/in this project:
 
 * [PolymerTS](https://github.com/nippur72/PolymerTS)
 * [polymer-decorators](https://github.com/Polymer/polymer-decorators)
+* [TypeDoc](http://typedoc.org)
 
 ## Contributing
 

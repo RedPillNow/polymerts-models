@@ -287,6 +287,12 @@ var RedPill;
         });
         Object.defineProperty(Component.prototype, "extendsClass", {
             get: function () {
+                if (!this._extendsClass && this.tsNode) {
+                    var classDecl = this.tsNode;
+                    var heritageNode = classDecl.heritageClauses[0];
+                    var propAccessExp = heritageNode.types[0].expression;
+                    this.extendsClass = propAccessExp.expression.getText() + '.' + propAccessExp.name.getText();
+                }
                 return this._extendsClass;
             },
             set: function (extendsClass) {
@@ -410,13 +416,13 @@ var RedPill;
         Object.defineProperty(Component.prototype, "polymerDecoratorSignature", {
             get: function () {
                 if (!this._polymerDecoratorSignature) {
-                    var comment = this.comment && this.comment.commentText ? this.comment.commentText : '';
+                    var comment = this.comment && this.comment.commentText ? this.comment.toDocOnlyMarkup() : '';
                     this._polymerDecoratorSignature = comment;
                     this._polymerDecoratorSignature += '@customElement(\'' + this.name + '\')\n';
                     this._polymerDecoratorSignature += 'export class ' + this.className + ' extends ';
                     var extendsClass = this.extendsClass === 'polymer.Base' ? 'Polymer.Element' : this.extendsClass;
                     var extendStatement = extendsClass + ' {\n';
-                    if (this.listeners) {
+                    if (this.listeners && this.listeners.length > 0) {
                         extendStatement = 'Polymer.GestureEventListeners(';
                         extendStatement += 'Polymer.DeclarativeEventListeners(';
                         extendStatement += extendsClass + ')) {\n';

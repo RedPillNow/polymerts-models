@@ -350,7 +350,10 @@ export module RedPill {
 		 */
 		get extendsClass(): string {
 			if (!this._extendsClass && this.tsNode) {
-
+				let classDecl = <ts.ClassDeclaration>this.tsNode;
+				let heritageNode = <ts.HeritageClause>classDecl.heritageClauses[0];
+				let propAccessExp = <ts.PropertyAccessExpression>heritageNode.types[0].expression;
+				this.extendsClass = propAccessExp.expression.getText() + '.' + propAccessExp.name.getText();
 			}
 			return this._extendsClass;
 		}
@@ -490,7 +493,7 @@ export module RedPill {
 				this._polymerDecoratorSignature += 'export class ' + this.className + ' extends ';
 				let extendsClass = this.extendsClass === 'polymer.Base' ? 'Polymer.Element' : this.extendsClass;
 				let extendStatement = extendsClass + ' {\n';
-				if (this.listeners) {
+				if (this.listeners && this.listeners.length > 0) {
 					extendStatement = 'Polymer.GestureEventListeners(';
 					extendStatement += 'Polymer.DeclarativeEventListeners(';
 					extendStatement += extendsClass + ')) {\n'
@@ -498,6 +501,7 @@ export module RedPill {
 				this._polymerDecoratorSignature += extendStatement;
 				this._polymerDecoratorSignature += 'static is = \'' + this.name + '\';\n';
 
+				this._polymerDecoratorSignature += '}';
 			}
 			return this._polymerDecoratorSignature;
 		}

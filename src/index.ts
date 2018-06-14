@@ -38,11 +38,12 @@ export module RedPill {
 		private _comment: Comment;
 		private _endLineNum: number;
 		private _filePath: string;
-		private _startLineNum: number;
-		private _tsNode: ts.Node;
-		abstract polymerSignature;
 		abstract polymerDecoratorSignature;
 		abstract polymerIronPageSignature;
+		abstract polymerSignature;
+		protected _replacementText: string;
+		private _startLineNum: number;
+		private _tsNode: ts.Node;
 		private _warnings: Warning[] = [];
 
 		/**
@@ -108,6 +109,17 @@ export module RedPill {
 
 		set filePath(filePath) {
 			this._filePath = filePath;
+		}
+		/**
+		 * This is the existing text for a program part that should
+		 * be replaced by the new polymer-decorator text
+		 */
+		get replacementText() {
+			return this._replacementText;
+		}
+
+		set replacementText(replacementText: string) {
+			this._replacementText = replacementText;
 		}
 		/**
 		 * The starting line number
@@ -544,6 +556,14 @@ export module RedPill {
 
 		set properties(properties) {
 			this._properties = properties;
+		}
+
+		get replacementText() {
+			if (!this._replacementText && this.tsNode) {
+				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
+				this._replacementText = clazz.getText();
+			}
+			return this._replacementText;
 		}
 		/**
 		 * Set to true to honor patterns for the Metadata Reflection API

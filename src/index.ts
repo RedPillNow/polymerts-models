@@ -557,12 +557,19 @@ export module RedPill {
 		set properties(properties) {
 			this._properties = properties;
 		}
-
+		/**
+		 * This is the existing text for a program part that should
+		 * be replaced by the new polymer-decorator text
+		 */
 		get replacementText() {
 			if (!this._replacementText && this.tsNode) {
 				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
-				let clauses: ts.NodeArray<ts.HeritageClause> = clazz.heritageClauses;
-				this._replacementText = clauses[0].getText();
+				let heritage: ts.NodeArray<ts.HeritageClause> = clazz.heritageClauses;
+				let txt = 'class ' + this.className;
+				if (heritage && heritage.length > 0) {
+					txt += ' ' + heritage[0].getText();
+				}
+				this._replacementText = txt;
 			}
 			return this._replacementText;
 		}
@@ -1144,6 +1151,22 @@ export module RedPill {
 		get polymerSignature() {
 			return this._polymerSignature;
 		}
+		/**
+		 * This is the existing text for a program part that should
+		 * be replaced by the new polymer-decorator text
+		 */
+		get replacementText() {
+			if (!this._replacementText && this.tsNode) {
+				let txt = '@listen(';
+				if (this.isExpression) {
+					txt += this.eventDeclaration + ')';
+				}else {
+					txt += '\'' + this.eventDeclaration + '\')'
+				}
+				this._replacementText = txt;
+			}
+			return this._replacementText;
+		}
 	}
 	/**
 	 * Class representing an observer defined with @observe
@@ -1400,6 +1423,18 @@ export module RedPill {
 				this.addWarning('Observer.polymerSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should be just be added to a declared property');
 			}
 			return this._polymerSignature;
+		}
+		/**
+		 * This is the existing text for a program part that should
+		 * be replaced by the new polymer-decorator text
+		 */
+		get replacementText() {
+			if (!this._replacementText && this.tsNode) {
+				let txt = '@observe(';
+				txt += this.params && this.params.length > 0 ? this.params.join(',') : '';
+				this._replacementText = txt;
+			}
+			return this._replacementText;
 		}
 	}
 	/**

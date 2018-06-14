@@ -142,6 +142,7 @@ export declare module RedPill {
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
+        readonly replacementText: string;
     }
     class Observer extends ProgramPart {
         private _component;
@@ -163,6 +164,7 @@ export declare module RedPill {
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
+        readonly replacementText: string;
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;

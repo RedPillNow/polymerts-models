@@ -484,8 +484,12 @@ var RedPill;
             get: function () {
                 if (!this._replacementText && this.tsNode) {
                     var clazz = this.tsNode;
-                    var clauses = clazz.heritageClauses;
-                    this._replacementText = clauses[0].getText();
+                    var heritage = clazz.heritageClauses;
+                    var txt = 'class ' + this.className;
+                    if (heritage && heritage.length > 0) {
+                        txt += ' ' + heritage[0].getText();
+                    }
+                    this._replacementText = txt;
                 }
                 return this._replacementText;
             },
@@ -976,6 +980,23 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Listener.prototype, "replacementText", {
+            get: function () {
+                if (!this._replacementText && this.tsNode) {
+                    var txt = '@listen(';
+                    if (this.isExpression) {
+                        txt += this.eventDeclaration + ')';
+                    }
+                    else {
+                        txt += '\'' + this.eventDeclaration + '\')';
+                    }
+                    this._replacementText = txt;
+                }
+                return this._replacementText;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Listener;
     }(ProgramPart));
     RedPill.Listener = Listener;
@@ -1167,6 +1188,18 @@ var RedPill;
                     this.addWarning('Observer.polymerSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should be just be added to a declared property');
                 }
                 return this._polymerSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Observer.prototype, "replacementText", {
+            get: function () {
+                if (!this._replacementText && this.tsNode) {
+                    var txt = '@observe(';
+                    txt += this.params && this.params.length > 0 ? this.params.join(',') : '';
+                    this._replacementText = txt;
+                }
+                return this._replacementText;
             },
             enumerable: true,
             configurable: true

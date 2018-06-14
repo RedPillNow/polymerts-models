@@ -96,6 +96,16 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ProgramPart.prototype, "replacementText", {
+            get: function () {
+                return this._replacementText;
+            },
+            set: function (replacementText) {
+                this._replacementText = replacementText;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(ProgramPart.prototype, "startLineNum", {
             get: function () {
                 if ((!this._startLineNum || this._startLineNum === 0) && this.tsNode) {
@@ -429,6 +439,7 @@ var RedPill;
                     }
                     this._polymerDecoratorSignature += extendStatement;
                     this._polymerDecoratorSignature += 'static is = \'' + this.name + '\';\n';
+                    this._polymerDecoratorSignature += '}';
                 }
                 return this._polymerDecoratorSignature;
             },
@@ -465,6 +476,17 @@ var RedPill;
             },
             set: function (properties) {
                 this._properties = properties;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "replacementText", {
+            get: function () {
+                if (!this._replacementText && this.tsNode) {
+                    var clazz = this.tsNode;
+                    this._replacementText = clazz.getText();
+                }
+                return this._replacementText;
             },
             enumerable: true,
             configurable: true

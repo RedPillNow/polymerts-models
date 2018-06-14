@@ -9,15 +9,17 @@ export declare module RedPill {
         private _comment;
         private _endLineNum;
         private _filePath;
-        private _startLineNum;
-        private _tsNode;
-        abstract polymerSignature: any;
         abstract polymerDecoratorSignature: any;
         abstract polymerIronPageSignature: any;
+        abstract polymerSignature: any;
+        protected _replacementText: string;
+        private _startLineNum;
+        private _tsNode;
         private _warnings;
         comment: Comment;
         endLineNum: number;
         filePath: string;
+        replacementText: string;
         startLineNum: number;
         tsNode: ts.Node;
         warnings: Warning[];
@@ -68,6 +70,7 @@ export declare module RedPill {
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
         properties: Property[];
+        readonly replacementText: string;
         useMetadataReflection: boolean;
     }
     enum ProgramType {

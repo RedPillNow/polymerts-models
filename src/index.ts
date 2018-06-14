@@ -561,8 +561,8 @@ export module RedPill {
 		get replacementText() {
 			if (!this._replacementText && this.tsNode) {
 				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
-				let declaration: ts.Declaration = clazz._declarationBrand;
-				this._replacementText = declaration.getText();
+				let clauses: ts.NodeArray<ts.HeritageClause> = clazz.heritageClauses;
+				this._replacementText = clauses[0].getText();
 			}
 			return this._replacementText;
 		}

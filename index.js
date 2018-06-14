@@ -484,8 +484,8 @@ var RedPill;
             get: function () {
                 if (!this._replacementText && this.tsNode) {
                     var clazz = this.tsNode;
-                    var declaration = clazz._declarationBrand;
-                    this._replacementText = declaration.getText();
+                    var clauses = clazz.heritageClauses;
+                    this._replacementText = clauses[0].getText();
                 }
                 return this._replacementText;
             },

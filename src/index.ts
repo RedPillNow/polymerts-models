@@ -37,6 +37,7 @@ export module RedPill {
 	export abstract class ProgramPart {
 		private _comment: Comment;
 		private _endLineNum: number;
+		private _fileName: string;
 		private _filePath: string;
 		abstract polymerDecoratorSignature;
 		abstract polymerIronPageSignature;
@@ -96,6 +97,14 @@ export module RedPill {
 		set endLineNum(endLineNum) {
 			this._endLineNum = endLineNum;
 		}
+
+		get fileName(): string {
+			if (!this._fileName && this.filePath) {
+				this._fileName = path.basename(this.filePath);
+			}
+			return this._fileName;
+		}
+
 		/**
 		 * The file path where this TypeScript node was encountered
 		 * @type {string}
@@ -1865,9 +1874,9 @@ export module RedPill {
 		 */
 		get polymerDecoratedPropertySignature(): string {
 			if (!this._polymerDecoratedPropertySignature && this.method) {
-				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-				this._polymerDecoratedPropertySignature = comment;
-				this._polymerDecoratedPropertySignature += '\t\t\t@property(';
+				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				this._polymerDecoratedPropertySignature = comment; */
+				this._polymerDecoratedPropertySignature = '\t\t\t@property(';
 				let paramsObj: any = {};
 				if (this.params) {
 					paramsObj = getObjectFromString(this.params);
@@ -1910,10 +1919,10 @@ export module RedPill {
 		 */
 		get polymerDecoratorSignature(): string {
 			if (!this._polymerDecoratorSignature && this.method && this.component) {
-				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				this._polymerDecoratorSignature = comment; */
+				this._polymerDecoratorSignature = '\t\t\t@computed';
 				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '\t\t\t@computed';
 				if (componentClass) {
 					this._polymerDecoratorSignature += '<' + componentClass + '>';
 				}
@@ -1927,7 +1936,7 @@ export module RedPill {
 					}
 				}
 				this._polymerDecoratorSignature += ')\n';
-				this._polymerDecoratorSignature += '\t\t\tget ' + this.method.polymerSignature;
+				this._polymerDecoratorSignature += '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
 			}
 			return this._polymerDecoratorSignature;
 		}
@@ -1945,10 +1954,10 @@ export module RedPill {
 		 */
 		get polymerDecoratorTypedSignature(): string {
 			if (!this._polymerDecoratorTypedSignature && this.method) {
-				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+				this._polymerDecoratorTypedSignature = comment; */
+				this._polymerDecoratorTypedSignature = '\t\t\t@computed';
 				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-				this._polymerDecoratorTypedSignature = comment;
-				this._polymerDecoratorTypedSignature += '\t\t\t@computed';
 				if (componentClass) {
 					this._polymerDecoratorTypedSignature += '<' + componentClass + '>';
 				}
@@ -1972,7 +1981,7 @@ export module RedPill {
 				}
 				this._polymerDecoratorTypedSignature += getStringFromObject(paramsObj);
 				this._polymerDecoratorTypedSignature += ')\n';
-				this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+				this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimLeft(this.method.polymerSignature);
 			}
 			return this._polymerDecoratorTypedSignature;
 		}
@@ -2013,7 +2022,7 @@ export module RedPill {
 		 */
 		get polymerSignature() {
 			if (!this._polymerSignature && this.method) {
-				this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+				this._polymerSignature = '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
 			}
 			return this._polymerSignature;
 		}
@@ -2070,6 +2079,10 @@ export module RedPill {
 	 */
 	export function trimRight(str): string {
 		return str.replace(/\s+$/, '');
+	}
+
+	export function trimLeft(str): string {
+		return str.replace(/^\s*/, '');
 	}
 	/**
 	 * Trim all tabs from a string

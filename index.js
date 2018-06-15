@@ -83,6 +83,16 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ProgramPart.prototype, "fileName", {
+            get: function () {
+                if (!this._fileName && this.filePath) {
+                    this._fileName = path.basename(this.filePath);
+                }
+                return this._fileName;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(ProgramPart.prototype, "filePath", {
             get: function () {
                 if (!this._filePath && this.tsNode) {
@@ -1541,9 +1551,7 @@ var RedPill;
         Object.defineProperty(ComputedProperty.prototype, "polymerDecoratedPropertySignature", {
             get: function () {
                 if (!this._polymerDecoratedPropertySignature && this.method) {
-                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-                    this._polymerDecoratedPropertySignature = comment;
-                    this._polymerDecoratedPropertySignature += '\t\t\t@property(';
+                    this._polymerDecoratedPropertySignature = '\t\t\t@property(';
                     var paramsObj = {};
                     if (this.params) {
                         paramsObj = getObjectFromString(this.params);
@@ -1576,10 +1584,8 @@ var RedPill;
         Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorSignature", {
             get: function () {
                 if (!this._polymerDecoratorSignature && this.method && this.component) {
-                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerDecoratorSignature = '\t\t\t@computed';
                     var componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-                    this._polymerDecoratorSignature = comment;
-                    this._polymerDecoratorSignature += '\t\t\t@computed';
                     if (componentClass) {
                         this._polymerDecoratorSignature += '<' + componentClass + '>';
                     }
@@ -1593,7 +1599,7 @@ var RedPill;
                         }
                     }
                     this._polymerDecoratorSignature += ')\n';
-                    this._polymerDecoratorSignature += '\t\t\tget ' + this.method.polymerSignature;
+                    this._polymerDecoratorSignature += '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
                 }
                 return this._polymerDecoratorSignature;
             },
@@ -1603,10 +1609,8 @@ var RedPill;
         Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorTypedSignature", {
             get: function () {
                 if (!this._polymerDecoratorTypedSignature && this.method) {
-                    var comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
+                    this._polymerDecoratorTypedSignature = '\t\t\t@computed';
                     var componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-                    this._polymerDecoratorTypedSignature = comment;
-                    this._polymerDecoratorTypedSignature += '\t\t\t@computed';
                     if (componentClass) {
                         this._polymerDecoratorTypedSignature += '<' + componentClass + '>';
                     }
@@ -1631,7 +1635,7 @@ var RedPill;
                     }
                     this._polymerDecoratorTypedSignature += getStringFromObject(paramsObj);
                     this._polymerDecoratorTypedSignature += ')\n';
-                    this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+                    this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimLeft(this.method.polymerSignature);
                 }
                 return this._polymerDecoratorTypedSignature;
             },
@@ -1656,7 +1660,7 @@ var RedPill;
         Object.defineProperty(ComputedProperty.prototype, "polymerSignature", {
             get: function () {
                 if (!this._polymerSignature && this.method) {
-                    this._polymerSignature = '\t\t\tget ' + trimAllWhitespace(this.method.polymerSignature);
+                    this._polymerSignature = '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
                 }
                 return this._polymerSignature;
             },
@@ -1701,6 +1705,10 @@ var RedPill;
         return str.replace(/\s+$/, '');
     }
     RedPill.trimRight = trimRight;
+    function trimLeft(str) {
+        return str.replace(/^\s*/, '');
+    }
+    RedPill.trimLeft = trimLeft;
     function trimTabs(str) {
         return str.replace(/\t+/g, '');
     }

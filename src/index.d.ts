@@ -8,6 +8,7 @@ export declare module RedPill {
     abstract class ProgramPart {
         private _comment;
         private _endLineNum;
+        private _fileName;
         private _filePath;
         abstract polymerDecoratorSignature: any;
         abstract polymerIronPageSignature: any;
@@ -18,6 +19,7 @@ export declare module RedPill {
         private _warnings;
         comment: Comment;
         endLineNum: number;
+        readonly fileName: string;
         filePath: string;
         replacementText: string;
         startLineNum: number;
@@ -142,6 +144,7 @@ export declare module RedPill {
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
+        readonly replacementText: string;
     }
     class Observer extends ProgramPart {
         private _component;
@@ -163,6 +166,7 @@ export declare module RedPill {
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
+        readonly replacementText: string;
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;
@@ -224,6 +228,7 @@ export declare module RedPill {
         fullHtmlFilePath: string;
     }
     function trimRight(str: any): string;
+    function trimLeft(str: any): string;
     function trimTabs(str: any): string;
     function trimAllWhitespace(str: any): string;
     function getObjectLiteralString(objExp: ts.ObjectLiteralExpression): any;
@@ -237,6 +242,7 @@ export declare module RedPill {
     function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
     function getMethodFromListener(listener: Listener): Function;
     function getMethodFromComputed(computed: ComputedProperty): Function;
+    function isComponent(node: ts.ClassDeclaration): boolean;
     function isComputedProperty(node: ts.MethodDeclaration): boolean;
     function isListener(node: ts.MethodDeclaration): boolean;
     function isObserver(node: ts.MethodDeclaration): boolean;

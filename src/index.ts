@@ -267,6 +267,7 @@ export module RedPill {
 		private _className: string;
 		private _computedProperties: ComputedProperty[];
 		private _cssFilePath: string;
+		private _decorator: ts.Decorator;
 		private _extendsClass: string;
 		private _htmlFilePath: string;
 		private _listeners: Listener[];
@@ -364,6 +365,23 @@ export module RedPill {
 
 		set cssFilePath(cssFilePath) {
 			this._cssFilePath = cssFilePath;
+		}
+		/**
+		 * The relevant decorator that defines this class as a component
+		 * @returns {ts.Decorator}
+		 */
+		get decorator(): ts.Decorator {
+			if (!this._decorator && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
+					if (componentMatch && componentMatch.length > 0) {
+						this._decorator = decorator;
+					}
+				});
+			}
+			return this._decorator;
 		}
 		/**
 		 * The class the component class extends
@@ -1921,7 +1939,7 @@ export module RedPill {
 			if (!this._polymerDecoratorSignature && this.method && this.component) {
 				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
 				this._polymerDecoratorSignature = comment; */
-				this._polymerDecoratorSignature = '\t\t\t@computed';
+				this._polymerDecoratorSignature = '\t\t@computed';
 				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
 				if (componentClass) {
 					this._polymerDecoratorSignature += '<' + componentClass + '>';
@@ -2080,7 +2098,12 @@ export module RedPill {
 	export function trimRight(str): string {
 		return str.replace(/\s+$/, '');
 	}
-
+	/**
+	 * Trim all whitespace to the left of a string
+	 * @export
+	 * @param {any} str
+	 * @returns {string}
+	 */
 	export function trimLeft(str): string {
 		return str.replace(/^\s*/, '');
 	}
@@ -2321,41 +2344,28 @@ export module RedPill {
 		return computedMethod;
 	}
 	/**
-	 * Create a method from an observer
-	 * @export
-	 * @param {Observer} observer
-	 * @returns {Function}
+	 * Determine of the passed in node matches the pattern of a
+	 * component. Mainly, is the decorator have a name of 'component'
+	 * and all the other relevant bits are present
+	 * @param {ts.ClassDeclaration} node
+	 * @returns {boolean}
 	 */
-	/* export function getMethodFromObserver(observer: Observer): Function {
-		let observerMethod: Function = null;
-		if (observer) {
-			if (observer.methodName) {
-				observerMethod = new Function();
-				observerMethod.methodName = observer.methodName;
-				if (observer.properties && observer.properties.length > 0) {
-					let paramArr = [];
-					for (let i = 0; i < observer.properties.length; i++) {
-						let prop = observer.params[i];
-						let propVal = null;
-						if (prop.indexOf('.') > -1) {
-							propVal = prop.split('.')[1];
-						} else {
-							propVal = prop;
-						}
-						paramArr.push(propVal);
-					}
-					observerMethod.parameters = paramArr;
+	export function isComponent(node: ts.ClassDeclaration): boolean {
+		let isComponent = false;
+		if (node.decorators && node.decorators.length > 0) {
+			for (let i = 0; i < node.decorators.length; i++) {
+				let val: ts.Decorator = node.decorators[i];
+				let exp = val.expression;
+				let expText = exp.getText();
+				let decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
+				if (decoratorMatch && decoratorMatch.length > 0) {
+					isComponent = true;
+					break;
 				}
-				observerMethod.comment = observer.comment || new Comment();
-				observerMethod.comment.isFor = ProgramType.Function;
-				if (!observer.comment) {
-					observerMethod.comment.commentText = '';
-				}
-				observer.comment = null;
 			}
 		}
-		return observerMethod;
-	} */
+		return isComponent;
+	}
 	/**
 	 * Determine of the passed in node matches the pattern of a
 	 * computed property. Mainly, is the decorator have a name of 'computed'
@@ -2374,6 +2384,19 @@ export module RedPill {
 			});
 		}
 		return isComputed;
+	}
+	/**
+	 * Determine of the passed in node matches the pattern of a
+	 * property.
+	 * @param {ts.PropertyDeclaration} node
+	 * @returns {boolean}
+	 */
+	export function isDeclaredProperty(node: ts.PropertyDeclaration): boolean {
+		let isDeclaredProp = false;
+		if (node && node.decorators && node.decorators.length > 0) {
+			isDeclaredProp = true;
+		}
+		return isDeclaredProp;
 	}
 	/**
 	 * Determine if the passed in node matches the pattern of a

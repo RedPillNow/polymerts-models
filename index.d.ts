@@ -44,6 +44,7 @@ export declare module RedPill {
         private _className;
         private _computedProperties;
         private _cssFilePath;
+        private _decorator;
         private _extendsClass;
         private _htmlFilePath;
         private _listeners;
@@ -61,6 +62,7 @@ export declare module RedPill {
         className: string;
         computedProperties: ComputedProperty[];
         cssFilePath: string;
+        readonly decorator: ts.Decorator;
         extendsClass: string;
         htmlFilePath: string;
         listeners: Listener[];
@@ -242,7 +244,9 @@ export declare module RedPill {
     function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
     function getMethodFromListener(listener: Listener): Function;
     function getMethodFromComputed(computed: ComputedProperty): Function;
+    function isComponent(node: ts.ClassDeclaration): boolean;
     function isComputedProperty(node: ts.MethodDeclaration): boolean;
+    function isDeclaredProperty(node: ts.PropertyDeclaration): boolean;
     function isListener(node: ts.MethodDeclaration): boolean;
     function isObserver(node: ts.MethodDeclaration): boolean;
     function getTypescriptType(property: Property): string;

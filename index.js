@@ -305,6 +305,24 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Component.prototype, "decorator", {
+            get: function () {
+                var _this = this;
+                if (!this._decorator && this.tsNode) {
+                    this.tsNode.decorators.forEach(function (decorator) {
+                        var exp = decorator.expression;
+                        var expText = exp.getText();
+                        var componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
+                        if (componentMatch && componentMatch.length > 0) {
+                            _this._decorator = decorator;
+                        }
+                    });
+                }
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Component.prototype, "extendsClass", {
             get: function () {
                 if (!this._extendsClass && this.tsNode) {
@@ -1584,7 +1602,7 @@ var RedPill;
         Object.defineProperty(ComputedProperty.prototype, "polymerDecoratorSignature", {
             get: function () {
                 if (!this._polymerDecoratorSignature && this.method && this.component) {
-                    this._polymerDecoratorSignature = '\t\t\t@computed';
+                    this._polymerDecoratorSignature = '\t\t@computed';
                     var componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
                     if (componentClass) {
                         this._polymerDecoratorSignature += '<' + componentClass + '>';
@@ -1876,6 +1894,23 @@ var RedPill;
         return computedMethod;
     }
     RedPill.getMethodFromComputed = getMethodFromComputed;
+    function isComponent(node) {
+        var isComponent = false;
+        if (node.decorators && node.decorators.length > 0) {
+            for (var i = 0; i < node.decorators.length; i++) {
+                var val = node.decorators[i];
+                var exp = val.expression;
+                var expText = exp.getText();
+                var decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
+                if (decoratorMatch && decoratorMatch.length > 0) {
+                    isComponent = true;
+                    break;
+                }
+            }
+        }
+        return isComponent;
+    }
+    RedPill.isComponent = isComponent;
     function isComputedProperty(node) {
         var isComputed = false;
         if (node && node.decorators && node.decorators.length > 0) {
@@ -1889,6 +1924,14 @@ var RedPill;
         return isComputed;
     }
     RedPill.isComputedProperty = isComputedProperty;
+    function isDeclaredProperty(node) {
+        var isDeclaredProp = false;
+        if (node && node.decorators && node.decorators.length > 0) {
+            isDeclaredProp = true;
+        }
+        return isDeclaredProp;
+    }
+    RedPill.isDeclaredProperty = isDeclaredProperty;
     function isListener(node) {
         var isListener = false;
         if (node && node.decorators && node.decorators.length > 0) {

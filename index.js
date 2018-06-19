@@ -28,6 +28,16 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Warning.prototype, "tsNode", {
+            get: function () {
+                return this._tsNode;
+            },
+            set: function (tsNode) {
+                this._tsNode = tsNode;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Warning;
     }());
     RedPill.Warning = Warning;
@@ -181,19 +191,19 @@ var RedPill;
         function IncludedBehavior() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
+        Object.defineProperty(IncludedBehavior.prototype, "decorator", {
+            get: function () {
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(IncludedBehavior.prototype, "name", {
             get: function () {
                 return this._name;
             },
             set: function (name) {
                 this._name = name;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(IncludedBehavior.prototype, "polymerSignature", {
-            get: function () {
-                return this._polymerSignature;
             },
             enumerable: true,
             configurable: true
@@ -208,6 +218,13 @@ var RedPill;
         Object.defineProperty(IncludedBehavior.prototype, "polymerIronPageSignature", {
             get: function () {
                 return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(IncludedBehavior.prototype, "polymerSignature", {
+            get: function () {
+                return this._polymerSignature;
             },
             enumerable: true,
             configurable: true
@@ -661,6 +678,13 @@ var RedPill;
             _this.tsNode = node;
             return _this;
         }
+        Object.defineProperty(Function.prototype, "decorator", {
+            get: function () {
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Function.prototype, "methodName", {
             get: function () {
                 if (!this._methodName && this.tsNode) {
@@ -788,6 +812,24 @@ var RedPill;
             _this.tsNode = node;
             return _this;
         }
+        Object.defineProperty(Listener.prototype, "decorator", {
+            get: function () {
+                var _this = this;
+                if (!this._decorator && this.tsNode) {
+                    this.tsNode.decorators.forEach(function (decorator) {
+                        var exp = decorator.expression;
+                        var expText = exp.getText();
+                        var componentMatch = /(\listen\(([\w.\-'"]*)\))/.exec(expText);
+                        if (componentMatch && componentMatch.length > 0) {
+                            _this._decorator = decorator;
+                        }
+                    });
+                }
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Listener.prototype, "elementId", {
             get: function () {
                 if (!this._elementId && !this.isExpression && this.tsNode) {
@@ -1047,6 +1089,24 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Observer.prototype, "decorator", {
+            get: function () {
+                var _this = this;
+                if (!this._decorator && this.tsNode) {
+                    this.tsNode.decorators.forEach(function (decorator) {
+                        var exp = decorator.expression;
+                        var expText = exp.getText();
+                        var componentMatch = /(\observe\(([a-zA-Z0-9:,\s'".]*)?\))/.exec(expText);
+                        if (componentMatch && componentMatch.length > 0) {
+                            _this._decorator = decorator;
+                        }
+                    });
+                }
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Observer.prototype, "isComplex", {
             get: function () {
                 var _this = this;
@@ -1245,6 +1305,24 @@ var RedPill;
             _this.tsNode = node;
             return _this;
         }
+        Object.defineProperty(Property.prototype, "decorator", {
+            get: function () {
+                var _this = this;
+                if (!this._decorator && this.tsNode) {
+                    this.tsNode.decorators.forEach(function (decorator) {
+                        var exp = decorator.expression;
+                        var expText = exp.getText();
+                        var componentMatch = /(\property\s*\(({[a-zA-Z0-9:,\s]*})\)\s*([\w\W]*);)/.exec(expText);
+                        if (componentMatch && componentMatch.length > 0) {
+                            _this._decorator = decorator;
+                        }
+                    });
+                }
+                return this._decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Property.prototype, "derivedComment", {
             get: function () {
                 if (!this.comment || !this.comment.commentText) {
@@ -1518,6 +1596,24 @@ var RedPill;
             },
             set: function (component) {
                 this._component = component;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ComputedProperty.prototype, "decorator", {
+            get: function () {
+                var _this = this;
+                if (!this._decorator && this.tsNode) {
+                    this.tsNode.decorators.forEach(function (decorator) {
+                        var exp = decorator.expression;
+                        var expText = exp.getText();
+                        var componentMatch = /(\computed\(({[a-zA-Z0-9:,\s]*})?\))/.exec(expText);
+                        if (componentMatch && componentMatch.length > 0) {
+                            _this._decorator = decorator;
+                        }
+                    });
+                }
+                return this._decorator;
             },
             enumerable: true,
             configurable: true

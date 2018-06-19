@@ -10,6 +10,7 @@ export module RedPill {
 	 */
 	export class Warning {
 		private _text;
+		private _tsNode: ts.Node;
 
 		constructor(warningText?: string) {
 			this.text = warningText;
@@ -25,8 +26,18 @@ export module RedPill {
 		set text(text) {
 			this._text = text;
 		}
-	}
+		/**
+		 * The ts.Node that we were processing when we encounterd
+		 * a warning
+		 */
+		get tsNode(): ts.Node {
+			return this._tsNode;
+		}
 
+		set tsNode(tsNode: ts.Node) {
+			this._tsNode = tsNode;
+		}
+	}
 	/**
 	 * Top level abstract class representing a component or part of a component. It contains
 	 * basic properties, getters, setters and abstract class definition
@@ -36,13 +47,11 @@ export module RedPill {
 	 */
 	export abstract class ProgramPart {
 		private _comment: Comment;
+		protected _decorator: ts.Decorator;
+		abstract decorator: ts.Decorator;
 		private _endLineNum: number;
 		private _fileName: string;
 		private _filePath: string;
-		abstract polymerDecoratorSignature;
-		abstract polymerIronPageSignature;
-		abstract polymerSignature;
-		protected _replacementText: string;
 		private _startLineNum: number;
 		private _tsNode: ts.Node;
 		private _warnings: Warning[] = [];
@@ -104,7 +113,6 @@ export module RedPill {
 			}
 			return this._fileName;
 		}
-
 		/**
 		 * The file path where this TypeScript node was encountered
 		 * @type {string}
@@ -118,17 +126,6 @@ export module RedPill {
 
 		set filePath(filePath) {
 			this._filePath = filePath;
-		}
-		/**
-		 * This is the existing text for a program part that should
-		 * be replaced by the new polymer-decorator text
-		 */
-		get replacementText() {
-			return this._replacementText;
-		}
-
-		set replacementText(replacementText: string) {
-			this._replacementText = replacementText;
 		}
 		/**
 		 * The starting line number
@@ -211,9 +208,11 @@ export module RedPill {
 	 */
 	export class IncludedBehavior extends ProgramPart {
 		private _name: string;
-		private _polymerSignature: string;
-		private _polymerDecoratorSignature: string;
 		private _polymerIronPageSignature: string;
+
+		get decorator() {
+			return this._decorator;
+		}
 
 		get name(): string {
 			return this._name;
@@ -221,23 +220,6 @@ export module RedPill {
 
 		set name(name) {
 			this._name = name;
-		}
-		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this._polymerSignature;
-		}
-		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			return this._polymerDecoratorSignature;
 		}
 		/**
 		 * Generates markup which can be used to create documentation which
@@ -248,7 +230,6 @@ export module RedPill {
 		get polymerIronPageSignature() {
 			return this._polymerIronPageSignature;
 		}
-
 		toDocOnlyMarkup() {
 			let comment = this.comment ? '\n' + this.comment.toDocOnlyMarkup() : '';
 			let behaviorStr = comment;
@@ -267,15 +248,12 @@ export module RedPill {
 		private _className: string;
 		private _computedProperties: ComputedProperty[];
 		private _cssFilePath: string;
-		private _decorator: ts.Decorator;
 		private _extendsClass: string;
 		private _htmlFilePath: string;
 		private _listeners: Listener[];
 		private _methods: any[];
 		private _name: string;
 		private _namespace: string;
-		private _polymerSignature: string;
-		private _polymerDecoratorSignature: string;
 		private _polymerIronPageSignature: string;
 		private _properties: Property[];
 		private _observers: Observer[];
@@ -369,6 +347,7 @@ export module RedPill {
 		/**
 		 * The relevant decorator that defines this class as a component
 		 * @returns {ts.Decorator}
+		 * @type {ts.Decorator}
 		 */
 		get decorator(): ts.Decorator {
 			if (!this._decorator && this.tsNode) {
@@ -519,32 +498,6 @@ export module RedPill {
 			this._observers = observers;
 		}
 		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			if (!this._polymerDecoratorSignature) {
-				let comment = this.comment && this.comment.commentText ? this.comment.toDocOnlyMarkup() : '';
-				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '@customElement(\'' + this.name + '\')\n';
-				this._polymerDecoratorSignature += 'export class ' + this.className + ' extends ';
-				let extendsClass = this.extendsClass === 'polymer.Base' ? 'Polymer.Element' : this.extendsClass;
-				let extendStatement = extendsClass + ' {\n';
-				if (this.listeners && this.listeners.length > 0) {
-					extendStatement = 'Polymer.GestureEventListeners(';
-					extendStatement += 'Polymer.DeclarativeEventListeners(';
-					extendStatement += extendsClass + ')) {\n'
-				}
-				this._polymerDecoratorSignature += extendStatement;
-				this._polymerDecoratorSignature += 'static is = \'' + this.name + '\';\n';
-
-				this._polymerDecoratorSignature += '}';
-			}
-			return this._polymerDecoratorSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * @readonly
@@ -552,14 +505,6 @@ export module RedPill {
 		 */
 		get polymerIronPageSignature() {
 			return this._polymerIronPageSignature;
-		}
-		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this._polymerSignature;
 		}
 		/**
 		 * The declared properties of this component class. If a property is
@@ -583,22 +528,6 @@ export module RedPill {
 
 		set properties(properties) {
 			this._properties = properties;
-		}
-		/**
-		 * This is the existing text for a program part that should
-		 * be replaced by the new polymer-decorator text
-		 */
-		get replacementText() {
-			if (!this._replacementText && this.tsNode) {
-				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
-				let heritage: ts.NodeArray<ts.HeritageClause> = clazz.heritageClauses;
-				let txt = 'class ' + this.className;
-				if (heritage && heritage.length > 0) {
-					txt += ' ' + heritage[0].getText();
-				}
-				this._replacementText = txt;
-			}
-			return this._replacementText;
 		}
 		/**
 		 * Set to true to honor patterns for the Metadata Reflection API
@@ -765,14 +694,16 @@ export module RedPill {
 	export class Function extends ProgramPart {
 		private _methodName: string;
 		private _parameters: string[];
-		private _polymerDecoratorSignature: string;
-		private _polymerSignature: string;
 		private _polymerIronPageSignature: string;
 		private _returnType: string;
 
 		constructor(node?: ts.Node) {
 			super();
 			this.tsNode = node;
+		}
+
+		get decorator() {
+			return this._decorator;
 		}
 		/**
 		 * The name of the method
@@ -818,39 +749,6 @@ export module RedPill {
 			this._parameters = parameters || [];
 		}
 		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * ```typescript
-		 * someFunc(arg1) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			if (!this._polymerSignature && this.tsNode) {
-				let methodDecl = <ts.MethodDeclaration>this.tsNode;
-				this._polymerSignature = '\t\t\t' + this.methodName + '(';
-				for (let i = 0; i < this.parameters.length; i++) {
-					this._polymerSignature += this.parameters[i];
-					this._polymerSignature += (i + 1) < this.parameters.length ? ', ' : '';
-				}
-				this._polymerSignature += ')';
-				this._polymerSignature += methodDecl.body.getText();
-			}
-			return this._polymerSignature;
-		}
-		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification
-		 * ```typescript
-		 * someFunc(arg1) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			return this.polymerSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * ```typescript
@@ -884,7 +782,11 @@ export module RedPill {
 			this._returnType = returnType;
 		}
 	}
-
+	/**
+	 * Represents an HTML comment
+	 * @export
+	 * @class HtmlComment
+	 */
 	export class HtmlComment {
 		private _comment: string;
 
@@ -919,8 +821,6 @@ export module RedPill {
 		private _isExpression: boolean = false;
 		private _method: Function;
 		private _methodName: string;
-		private _polymerDecoratorSignature: string;
-		private _polymerSignature: string;
 		private _polymerIronPageSignature: string;
 		private _polymerAddListenerSignature: string;
 		private _polymerRemoveListenerSignature: string;
@@ -928,6 +828,24 @@ export module RedPill {
 		constructor(node?: ts.Node) {
 			super();
 			this.tsNode = node;
+		}
+
+		/**
+		 * The relevant decorator that defines this method as a listener
+		 * @returns {ts.Decorator}
+		 */
+		get decorator(): ts.Decorator {
+			if (!this._decorator && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /(\listen\(([\w.\-'"]*)\))/.exec(expText);
+					if (componentMatch && componentMatch.length > 0) {
+						this._decorator = decorator;
+					}
+				});
+			}
+			return this._decorator;
 		}
 		/**
 		 * The element ID this listener is for
@@ -1117,47 +1035,6 @@ export module RedPill {
 			return this._polymerRemoveListenerSignature;
 		}
 		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification
-		 * @example
-		 * ```typescript
-		 * @listen('click', 'document')
-		 * _onClick(evt) {...}
-		 *
-		 * @listen('some-custom-event', 'elementId')
-		 * _onCustomEvt(evt) {...}
-		 *
-		 * @listen(Namespace.EventName, 'elementId')
-		 * _onEventName(evt) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			if (!this._polymerDecoratorSignature && this.method) {
-				let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '@listen(';
-				if (this.isExpression) {
-					this._polymerDecoratorSignature += this.eventDeclaration;
-				}else {
-					this._polymerDecoratorSignature += '\'';
-					this._polymerDecoratorSignature += this.eventName;
-					this._polymerDecoratorSignature += '\'';
-				}
-				this._polymerDecoratorSignature += ',\'';
-				if (this.elementId) {
-					this._polymerDecoratorSignature += this.elementId + '\'';
-				}else {
-					this._polymerDecoratorSignature += 'document\'';
-					this.addWarning('Listener.polymerDecoratorSignature: Listener for ' + this.eventDeclaration + ' did not have an element associated with it. We changed it to document.');
-				}
-				this._polymerDecoratorSignature += ')\n\t\t\t';
-				this._polymerDecoratorSignature += this.method.polymerSignature;
-			}
-			return this._polymerDecoratorSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * @readonly
@@ -1168,31 +1045,6 @@ export module RedPill {
 
 			}
 			return this._polymerIronPageSignature;
-		}
-		/**
-		 * This isn't really valid but required for the abstract class. Use
-		 * polymerAddListenerSignature instead
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this._polymerSignature;
-		}
-		/**
-		 * This is the existing text for a program part that should
-		 * be replaced by the new polymer-decorator text
-		 */
-		get replacementText() {
-			if (!this._replacementText && this.tsNode) {
-				let txt = '@listen(';
-				if (this.isExpression) {
-					txt += this.eventDeclaration + ')';
-				}else {
-					txt += '\'' + this.eventDeclaration + '\')'
-				}
-				this._replacementText = txt;
-			}
-			return this._replacementText;
 		}
 	}
 	/**
@@ -1208,8 +1060,6 @@ export module RedPill {
 		private _method: Function;
 		private _methodName: string;
 		private _params: string[];
-		private _polymerDecoratorSignature: string;
-		private _polymerSignature: string;
 		private _polymerIronPageSignature: string;
 		private _observerPropertySignature: string;
 
@@ -1225,6 +1075,23 @@ export module RedPill {
 
 		set component(component) {
 			this._component = component;
+		}
+		/**
+		 * The relevant decorator that defines this method as an observer
+		 * @returns {ts.Decorator}
+		 */
+		get decorator(): ts.Decorator {
+			if (!this._decorator && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /(\observe\(([a-zA-Z0-9:,\s'".]*)?\))/.exec(expText);
+					if (componentMatch && componentMatch.length > 0) {
+						this._decorator = decorator;
+					}
+				});
+			}
+			return this._decorator;
 		}
 		/**
 		 * True if the observer declaration is for an object property or more
@@ -1359,56 +1226,6 @@ export module RedPill {
 			this._params = properties;
 		}
 		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification. If this observer is a complex observer
-		 * (isComplex = true) will output the proper decorator and function.
-		 * Otherwill will be undefined
-		 * @example
-		 * ```typescript
-		 *
-		 * // PolymerTS Observer
-		 * @observe('prop1, prop2')
-		 * _onProp1Prop2(prop1, prop2) {...}
-		 *
-		 * // Above converted to
-		 * @observe('prop1','prop2')
-		 * _onProp1Prop2(prop1,prop2) {...}
-		 *
-		 * // PolymerTS Observer
-		 * @observe('prop1.*')
-		 * _onProp1Child(changeRecord) {...}
-		 *
-		 * // Above converted to
-		 * @observe('prop1.*')
-		 * _onProp1Child(changeRecord) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			if (!this._polymerDecoratorSignature && this.isComplex && this.method) {
-				let parseProps = () => {
-					let propsStr = '';
-					for (let i = 0; i < this.params.length; i++) {
-						let prop = this.params[i];
-						propsStr += '\'' + prop + '\'';
-						propsStr += (i + 1) < this.params.length ? ',' : '';
-					}
-					return propsStr;
-				}
-				let props = parseProps();
-				let comment = this.comment ? this.comment.toDocOnlyMarkup() : '';
-				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '\t\t\t@observe(';
-				this._polymerDecoratorSignature += props ? props : '';
-				this._polymerDecoratorSignature += '\')\n\t\t\t';
-				this._polymerDecoratorSignature += trimAllWhitespace(this.method.polymerSignature);
-			} else if (!this.isComplex) {
-				this.addWarning('Observer.polymerDecoratorSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should just be defined in a declared property');
-			}
-			return this._polymerDecoratorSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * @example
@@ -1432,37 +1249,6 @@ export module RedPill {
 			}
 			return this._polymerIronPageSignature;
 		}
-		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element.
-		 * This will only happen if this is a complex observer (isComplex = true)
-		 * @example
-		 * ```typescript
-		 *
-		 * _onProp1(prop1, prop2) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature(): string {
-			if (!this._polymerSignature && this.isComplex && this.method) {
-				this._polymerSignature = this.method.polymerSignature;
-			}else if (!this.isComplex) {
-				this.addWarning('Observer.polymerSignature - Observer with method name ' + this.methodName + ' is a simple observer. Maybe it should be just be added to a declared property');
-			}
-			return this._polymerSignature;
-		}
-		/**
-		 * This is the existing text for a program part that should
-		 * be replaced by the new polymer-decorator text
-		 */
-		get replacementText() {
-			if (!this._replacementText && this.tsNode) {
-				let txt = '@observe(';
-				txt += this.params && this.params.length > 0 ? this.params.join(',') : '';
-				this._replacementText = txt;
-			}
-			return this._replacementText;
-		}
 	}
 	/**
 	 * Class representing a declared property defined using @property
@@ -1477,8 +1263,6 @@ export module RedPill {
 		private _containsValueObjectDeclaration: boolean = false;
 		private _name: string;
 		protected _params: string;
-		protected _polymerDecoratorSignature: string;
-		protected _polymerSignature: string;
 		protected _polymerIronPageSignature: string;
 		private _type: string;
 		private _valueArrayParams: any;
@@ -1488,6 +1272,23 @@ export module RedPill {
 		constructor(node?: ts.Node) {
 			super();
 			this.tsNode = node;
+		}
+		/**
+		 * The relevant decorator that defines this class as a component
+		 * @returns {ts.Decorator}
+		 */
+		get decorator(): ts.Decorator {
+			if (!this._decorator && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /(\property\s*\(({[a-zA-Z0-9:,\s]*})\)\s*([\w\W]*);)/.exec(expText);
+					if (componentMatch && componentMatch.length > 0) {
+						this._decorator = decorator;
+					}
+				});
+			}
+			return this._decorator;
 		}
 		/**
 		 * This would be a computed comment if one isn't present
@@ -1615,33 +1416,6 @@ export module RedPill {
 			this._params = params;
 		}
 		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification.
-		 * @example
-		 * ```typescript
-		 * @property({
-		 * 	type: String
-		 * })
-		 * prop1: string;
-		 *
-		 * @property({
-		 * 	type: Object,
-		 * 	value: {foo: 'bar'}
-		 * })
-		 * prop2: string;
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			if (!this._polymerDecoratorSignature && this.tsNode) {
-				let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-				this._polymerDecoratorSignature = comment;
-				this._polymerDecoratorSignature += '\n\t\t\t' + this.tsNode.getText();
-			}
-			return this._polymerDecoratorSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * @example
@@ -1672,25 +1446,6 @@ export module RedPill {
 				}
 			}
 			return this._polymerIronPageSignature;
-		}
-		/**
-		 * Generates markup which can be used to in just a plain-jane polymer element
-		 * @example
-		 * ```typescript
-		 * prop1: {
-		 * 	type: String
-		 * }
-		 *
-		 * prop2: {
-		 * 	type: Object,
-		 * 	value: {foo: 'bar'}
-		 * }
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			return this.polymerIronPageSignature;
 		}
 		/**
 		 * The type for this property defined in the type property of the property definition
@@ -1801,10 +1556,6 @@ export module RedPill {
 		private _derivedMethodName: string;
 		private _method: Function;
 		private _methodName: string;
-		protected _polymerDecoratedPropertySignature: string;
-		protected _polymerDecoratorSignature: string;
-		protected _polymerDecoratorTypedSignature: string;
-		protected _polymerSignature: string;
 		protected _polymerIronPageSignature: string;
 
 		constructor(node?: ts.Node, component?: Component) {
@@ -1823,6 +1574,23 @@ export module RedPill {
 
 		set component(component) {
 			this._component = component;
+		}
+		/**
+		 * The relevant decorator that defines this method as a computed property
+		 * @returns {ts.Decorator}
+		 */
+		get decorator(): ts.Decorator {
+			if (!this._decorator && this.tsNode) {
+				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
+					let exp: ts.Expression = decorator.expression;
+					let expText = exp.getText();
+					let componentMatch = /(\computed\(({[a-zA-Z0-9:,\s]*})?\))/.exec(expText);
+					if (componentMatch && componentMatch.length > 0) {
+						this._decorator = decorator;
+					}
+				});
+			}
+			return this._decorator;
 		}
 		/**
 		 * If this computed property only contains a single property in it's definition
@@ -1874,136 +1642,6 @@ export module RedPill {
 			this._methodName = methodName;
 		}
 		/**
-		 * Use this to get a decorated property with the computed
-		 * parameter defined
-		 * @example
-		 * ```typescript
-		 *
-		 * @property({
-		 * 	type: String,
-		 * 	computed: '_getProp1(prop2)';
-		 * })
-		 * prop1: string;
-		 * get _getProp1(prop2) {...}
-		 *
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratedPropertySignature(): string {
-			if (!this._polymerDecoratedPropertySignature && this.method) {
-				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-				this._polymerDecoratedPropertySignature = comment; */
-				this._polymerDecoratedPropertySignature = '\t\t\t@property(';
-				let paramsObj: any = {};
-				if (this.params) {
-					paramsObj = getObjectFromString(this.params);
-				}else {
-					this.addWarning('ComputedProperty.polymerDecoratedPropertySignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
-					paramsObj = {
-						type: 'Object',
-						computed: ''
-					};
-				}
-				paramsObj.computed = this.propertyName + '(';
-				let methodParams = this.method.parameters;
-				for (let i = 0; i < methodParams.length; i++) {
-					let param = methodParams[i];
-					paramsObj.computed += '\'' + param + '\'';
-					paramsObj.computed += i < (methodParams.length - 1) ? ',' : ''
-				}
-				paramsObj.computed += ')';
-				this._polymerDecoratedPropertySignature += getStringFromObject(paramsObj);
-				this._polymerDecoratedPropertySignature += ')\n';
-				this._polymerDecoratedPropertySignature += 'get ' + this.propertyName + ': any;';
-				this.addWarning('ComputedProperty.polymerDecoratedPropertySignature ' + this.propertyName + ' - Since we don\'t have type information, type set to \'any\'');
-			}
-			return this._polymerDecoratedPropertySignature;
-		}
-		/**
-		 * Generates markup which aligns with the polymer-decorators
-		 * specification
-		 * @example
-		 * ```typescript
-		 *
-		 * @computed<ClassName>('prop2')
-		 * get prop1(prop2) {...}
-		 *
-		 * @computed<ClassName>('prop2', 'prop3')
-		 * get prop1(prop2, prop3) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorSignature(): string {
-			if (!this._polymerDecoratorSignature && this.method && this.component) {
-				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-				this._polymerDecoratorSignature = comment; */
-				this._polymerDecoratorSignature = '\t\t@computed';
-				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-				if (componentClass) {
-					this._polymerDecoratorSignature += '<' + componentClass + '>';
-				}
-				this._polymerDecoratorSignature += '(';
-				let methodParams = this.method.parameters;
-				for (let i = 0; i < methodParams.length; i++) {
-					let param = methodParams[i];
-					this._polymerDecoratorSignature += '\'' + param + '\'';
-					if (i < (methodParams.length - 1)) {
-						this._polymerDecoratorSignature += ',';
-					}
-				}
-				this._polymerDecoratorSignature += ')\n';
-				this._polymerDecoratorSignature += '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
-			}
-			return this._polymerDecoratorSignature;
-		}
-		/**
-		 * Generate a typed signature with decorator
-		 * @example
-		 * ```typescript
-		 *
-		 * @computed<MyElement>('foo', 'bar')
-		 * @property({type: String})
-		 * get fooBar(foo, bar) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerDecoratorTypedSignature(): string {
-			if (!this._polymerDecoratorTypedSignature && this.method) {
-				/* let comment = this.comment && this.comment.commentText ? '\n' + this.comment.toDocOnlyMarkup() : '\n' + this.derivedComment.toDocOnlyMarkup();
-				this._polymerDecoratorTypedSignature = comment; */
-				this._polymerDecoratorTypedSignature = '\t\t\t@computed';
-				let componentClass = this.component.namespace ? this.component.namespace + '.' + this.component.className : this.component.className;
-				if (componentClass) {
-					this._polymerDecoratorTypedSignature += '<' + componentClass + '>';
-				}
-				this._polymerDecoratorTypedSignature += '(';
-				let methodParams = this.method.parameters;
-				for (let i = 0; i < methodParams.length; i++) {
-					let param = methodParams[i];
-					this._polymerDecoratorTypedSignature += '\'' + param + '\'';
-					if (i < (methodParams.length - 1)) {
-						this._polymerDecoratorTypedSignature += ',';
-					}
-				}
-				this._polymerDecoratorTypedSignature += ')\n';
-				this._polymerDecoratorTypedSignature += '\t\t\t@property(';
-				let paramsObj: any = {};
-				if (this.params) {
-					paramsObj = getObjectFromString(this.params);
-				}else {
-					this.addWarning('ComputedPropety.polymerDecoratorSignature: ' + this.propertyName + ' - had no defined parameters. One was created with a \'type\' of Object');
-					paramsObj = {type: 'Object'};
-				}
-				this._polymerDecoratorTypedSignature += getStringFromObject(paramsObj);
-				this._polymerDecoratorTypedSignature += ')\n';
-				this._polymerDecoratorTypedSignature += '\t\t\tget ' + trimLeft(this.method.polymerSignature);
-			}
-			return this._polymerDecoratorTypedSignature;
-		}
-		/**
 		 * Generates markup which can be used to create documentation which
 		 * can then be used by iron-component-page
 		 * @example
@@ -2027,22 +1665,6 @@ export module RedPill {
 				this._polymerIronPageSignature += this._getNewParams();
 			}
 			return this._polymerIronPageSignature;
-		}
-		/**
-		 * Generates markup which can be used in just a plain-jane polymer element
-		 * @example
-		 * ```typescript
-		 *
-		 * get _prop1(prop2) {...}
-		 * ```
-		 * @readonly
-		 * @type {string}
-		 */
-		get polymerSignature() {
-			if (!this._polymerSignature && this.method) {
-				this._polymerSignature = '\t\t\tget ' + RedPill.trimLeft(this.method.polymerSignature);
-			}
-			return this._polymerSignature;
 		}
 		/**
 		 * The property name for this computed property. We just return
@@ -2469,4 +2091,4 @@ export module RedPill {
 		return returnVal;
 	}
 }
-export default {RedPill};
+// export default {RedPill};

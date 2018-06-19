@@ -2,17 +2,21 @@ import * as ts from 'typescript';
 export declare module RedPill {
     class Warning {
         private _text;
+        private _tsNode;
         constructor(warningText?: string);
         text: string;
+        tsNode: ts.Node;
     }
     abstract class ProgramPart {
         private _comment;
+        protected _decorator: ts.Decorator;
+        abstract decorator: ts.Decorator;
         private _endLineNum;
         private _fileName;
         private _filePath;
-        abstract polymerDecoratorSignature: any;
-        abstract polymerIronPageSignature: any;
-        abstract polymerSignature: any;
+        abstract polymerDecoratorSignature: string;
+        abstract polymerIronPageSignature: string;
+        abstract polymerSignature: string;
         protected _replacementText: string;
         private _startLineNum;
         private _tsNode;
@@ -33,10 +37,11 @@ export declare module RedPill {
         private _polymerSignature;
         private _polymerDecoratorSignature;
         private _polymerIronPageSignature;
+        readonly decorator: ts.Decorator;
         name: string;
-        readonly polymerSignature: string;
         readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
+        readonly polymerSignature: string;
         toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
@@ -44,7 +49,6 @@ export declare module RedPill {
         private _className;
         private _computedProperties;
         private _cssFilePath;
-        private _decorator;
         private _extendsClass;
         private _htmlFilePath;
         private _listeners;
@@ -84,7 +88,7 @@ export declare module RedPill {
         Behavior = "BEHAVIOR",
         Listener = "LISTENER",
         Observer = "OBSERVER",
-        Function = "FUNCTION",
+        Function = "FUNCTION"
     }
     class Comment {
         private _commentObj;
@@ -99,7 +103,7 @@ export declare module RedPill {
         isFor: ProgramType;
         startLineNum: number;
         tags: string[];
-        private _getIndent();
+        private _getIndent;
         toDocOnlyMarkup(): string;
     }
     class Function extends ProgramPart {
@@ -110,6 +114,7 @@ export declare module RedPill {
         private _polymerIronPageSignature;
         private _returnType;
         constructor(node?: ts.Node);
+        readonly decorator: ts.Decorator;
         methodName: string;
         parameters: string[];
         readonly polymerSignature: string;
@@ -135,6 +140,7 @@ export declare module RedPill {
         private _polymerAddListenerSignature;
         private _polymerRemoveListenerSignature;
         constructor(node?: ts.Node);
+        readonly decorator: ts.Decorator;
         elementId: string;
         eventDeclaration: string;
         eventName: string;
@@ -160,6 +166,7 @@ export declare module RedPill {
         private _observerPropertySignature;
         constructor(node?: ts.Node, component?: Component);
         component: Component;
+        readonly decorator: ts.Decorator;
         isComplex: boolean;
         method: Function;
         methodName: string;
@@ -184,6 +191,7 @@ export declare module RedPill {
         private _valueFunction;
         private _valueObjectParams;
         constructor(node?: ts.Node);
+        readonly decorator: ts.Decorator;
         readonly derivedComment: Comment;
         containsValueArrayLiteral: boolean;
         containsValueFunction: boolean;
@@ -210,6 +218,7 @@ export declare module RedPill {
         protected _polymerIronPageSignature: string;
         constructor(node?: ts.Node, component?: Component);
         component: Component;
+        readonly decorator: ts.Decorator;
         derivedMethodName: string;
         method: Function;
         methodName: string;
@@ -219,7 +228,7 @@ export declare module RedPill {
         readonly polymerIronPageSignature: string;
         readonly polymerSignature: string;
         readonly propertyName: string;
-        private _getNewParams();
+        private _getNewParams;
     }
     class PathInfo {
         fileName: string;

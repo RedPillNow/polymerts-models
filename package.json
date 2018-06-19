@@ -36,7 +36,7 @@
 		"gulp-sourcemaps": "^2.6.1",
 		"gulp-typescript": "^3.2.2",
 		"merge-stream": "^1.0.1",
-		"typescript": "^2.7.1"
+		"typescript": "^2.9.2"
 	},
 	"dependencies": {
 		"htmlparser2": "^3.9.2"

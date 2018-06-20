@@ -451,7 +451,7 @@ export module RedPill {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
 					let expText = exp.getText();
-					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(exp.getText());
+					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._name = componentMatch[1];
 					}
@@ -1978,6 +1978,10 @@ export module RedPill {
 			for (let i = 0; i < node.decorators.length; i++) {
 				let val: ts.Decorator = node.decorators[i];
 				let exp = val.expression;
+				console.log('val.expression is a ', (<any>ts).SyntaxKind[exp.kind]);
+				console.log('val.expression, getSourceFile=', exp.getSourceFile());
+				console.log('val.expression, val.getSourceFile=', val.getSourceFile());
+				console.log('val.expression, node.getSourceFile=', node.getSourceFile());
 				let expText = exp.getText();
 				let decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
 				if (decoratorMatch && decoratorMatch.length > 0) {

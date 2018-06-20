@@ -14,10 +14,6 @@ export declare module RedPill {
         private _endLineNum;
         private _fileName;
         private _filePath;
-        abstract polymerDecoratorSignature: string;
-        abstract polymerIronPageSignature: string;
-        abstract polymerSignature: string;
-        protected _replacementText: string;
         private _startLineNum;
         private _tsNode;
         private _warnings;
@@ -25,7 +21,6 @@ export declare module RedPill {
         endLineNum: number;
         readonly fileName: string;
         filePath: string;
-        replacementText: string;
         startLineNum: number;
         tsNode: ts.Node;
         warnings: Warning[];
@@ -34,14 +29,10 @@ export declare module RedPill {
     }
     class IncludedBehavior extends ProgramPart {
         private _name;
-        private _polymerSignature;
-        private _polymerDecoratorSignature;
         private _polymerIronPageSignature;
         readonly decorator: ts.Decorator;
         name: string;
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
         toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
@@ -55,8 +46,6 @@ export declare module RedPill {
         private _methods;
         private _name;
         private _namespace;
-        private _polymerSignature;
-        private _polymerDecoratorSignature;
         private _polymerIronPageSignature;
         private _properties;
         private _observers;
@@ -74,11 +63,8 @@ export declare module RedPill {
         name: string;
         namespace: string;
         observers: Observer[];
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
         properties: Property[];
-        readonly replacementText: string;
         useMetadataReflection: boolean;
     }
     enum ProgramType {
@@ -109,16 +95,12 @@ export declare module RedPill {
     class Function extends ProgramPart {
         private _methodName;
         private _parameters;
-        private _polymerDecoratorSignature;
-        private _polymerSignature;
         private _polymerIronPageSignature;
         private _returnType;
         constructor(node?: ts.Node);
         readonly decorator: ts.Decorator;
         methodName: string;
         parameters: string[];
-        readonly polymerSignature: string;
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
         returnType: string;
     }
@@ -134,8 +116,6 @@ export declare module RedPill {
         private _isExpression;
         private _method;
         private _methodName;
-        private _polymerDecoratorSignature;
-        private _polymerSignature;
         private _polymerIronPageSignature;
         private _polymerAddListenerSignature;
         private _polymerRemoveListenerSignature;
@@ -149,10 +129,7 @@ export declare module RedPill {
         methodName: string;
         readonly polymerAddListenerSignature: string;
         readonly polymerRemoveListenerSignature: string;
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
-        readonly replacementText: string;
     }
     class Observer extends ProgramPart {
         private _component;
@@ -160,8 +137,6 @@ export declare module RedPill {
         private _method;
         private _methodName;
         private _params;
-        private _polymerDecoratorSignature;
-        private _polymerSignature;
         private _polymerIronPageSignature;
         private _observerPropertySignature;
         constructor(node?: ts.Node, component?: Component);
@@ -172,10 +147,7 @@ export declare module RedPill {
         methodName: string;
         readonly observerPropertySignature: string;
         params: string[];
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
-        readonly replacementText: string;
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;
@@ -183,8 +155,6 @@ export declare module RedPill {
         private _containsValueObjectDeclaration;
         private _name;
         protected _params: string;
-        protected _polymerDecoratorSignature: string;
-        protected _polymerSignature: string;
         protected _polymerIronPageSignature: string;
         private _type;
         private _valueArrayParams;
@@ -198,9 +168,7 @@ export declare module RedPill {
         containsValueObjectDeclaration: boolean;
         name: string;
         params: string;
-        readonly polymerDecoratorSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
         type: string;
         valueArrayParams: any;
         valueFunction: Function;
@@ -211,10 +179,6 @@ export declare module RedPill {
         private _derivedMethodName;
         private _method;
         private _methodName;
-        protected _polymerDecoratedPropertySignature: string;
-        protected _polymerDecoratorSignature: string;
-        protected _polymerDecoratorTypedSignature: string;
-        protected _polymerSignature: string;
         protected _polymerIronPageSignature: string;
         constructor(node?: ts.Node, component?: Component);
         component: Component;
@@ -222,11 +186,7 @@ export declare module RedPill {
         derivedMethodName: string;
         method: Function;
         methodName: string;
-        readonly polymerDecoratedPropertySignature: string;
-        readonly polymerDecoratorSignature: string;
-        readonly polymerDecoratorTypedSignature: string;
         readonly polymerIronPageSignature: string;
-        readonly polymerSignature: string;
         readonly propertyName: string;
         private _getNewParams;
     }
@@ -260,7 +220,3 @@ export declare module RedPill {
     function isObserver(node: ts.MethodDeclaration): boolean;
     function getTypescriptType(property: Property): string;
 }
-declare const _default: {
-    RedPill: typeof RedPill;
-};
-export default _default;

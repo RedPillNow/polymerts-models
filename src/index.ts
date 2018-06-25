@@ -1,6 +1,4 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import * as htmlParser from 'htmlparser2';
 import * as ts from 'typescript';
 
 export module RedPill {
@@ -1196,7 +1194,7 @@ export module RedPill {
 					return false;
 				});
 				if (property) {
-					let propObj = getObjectFromString(property.params);
+					let propObj = getObjectFromString(property.params, this.sourceFile);
 					propObj.observer = this.methodName;
 					this._observerPropertySignature += '\t\t\t@property('
 					this._observerPropertySignature += getStringFromObject(propObj);
@@ -1417,7 +1415,7 @@ export module RedPill {
 					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
 						let objExp = <ts.ObjectLiteralExpression>childNode;
 						if (!insideProperty) {
-							let objLiteralObj = getObjectLiteralString(objExp);
+							let objLiteralObj = getObjectLiteralString(objExp, this.sourceFile);
 							this._params = objLiteralObj.str;
 							insideProperty = true;
 						}
@@ -1476,7 +1474,7 @@ export module RedPill {
 					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
 						let objExp = <ts.ObjectLiteralExpression>childNode;
 						if (!insideProperty) {
-							let objLiteralObj = RedPill.getObjectLiteralString(objExp);
+							let objLiteralObj = RedPill.getObjectLiteralString(objExp, this.sourceFile);
 							this._type = objLiteralObj.type;
 							insideProperty = true;
 						}
@@ -1548,7 +1546,7 @@ export module RedPill {
 						if (!insideProperty) {
 							insideProperty = true;
 						} else {
-							this._valueObjectParams = RedPill.getObjectLiteralString(objExp).str;
+							this._valueObjectParams = RedPill.getObjectLiteralString(objExp, this.sourceFile).str;
 						}
 					}
 					ts.forEachChild(childNode, parseChildren);
@@ -1770,20 +1768,20 @@ export module RedPill {
 	 * @param {ts.ObjectLiteralExpression} objExp
 	 * @returns {any}
 	 */
-	export function getObjectLiteralString(objExp: ts.ObjectLiteralExpression): any {
+	export function getObjectLiteralString(objExp: ts.ObjectLiteralExpression, sourceFile: ts.SourceFile): any {
 		let objLiteralObj:any = {};
 		if (objExp && objExp.properties && objExp.properties.length > 0) {
 			let paramStr = '{\n';
 			for (let i = 0; i < objExp.properties.length; i++) {
 				let propProperty: ts.PropertyAssignment = (<ts.PropertyAssignment>objExp.properties[i]);
-				let propPropertyKey = propProperty.name.getText(this.sourceFile);
-				paramStr += '\t' + propProperty.name.getText(this.sourceFile);
+				let propPropertyKey = propProperty.name.getText(sourceFile);
+				paramStr += '\t' + propProperty.name.getText(sourceFile);
 				paramStr += ': ';
-				paramStr += propProperty.initializer.getText(this.sourceFile);
+				paramStr += propProperty.initializer.getText(sourceFile);
 				paramStr += (i + 1) < objExp.properties.length ? ',' : '';
 				paramStr += '\n';
 				if (propPropertyKey === 'type') {
-					objLiteralObj.type = propProperty.initializer.getText(this.sourceFile);
+					objLiteralObj.type = propProperty.initializer.getText(sourceFile);
 				}
 			}
 			paramStr += '}';
@@ -1822,7 +1820,7 @@ export module RedPill {
 	 * @param {string} objectStr
 	 * @returns {any}
 	 */
-	export function getObjectFromString(objectStr: string): any {
+	export function getObjectFromString(objectStr: string, sourceFile: ts.SourceFile): any {
 		let params = {};
 		let partsArr = objectStr ? objectStr.split(',') : [];
 		for (let i = 0; i < partsArr.length; i++) {

@@ -1039,7 +1039,7 @@ var RedPill;
                         return false;
                     });
                     if (property) {
-                        var propObj = getObjectFromString(property.params);
+                        var propObj = getObjectFromString(property.params, this.sourceFile);
                         propObj.observer = this.methodName;
                         this._observerPropertySignature += '\t\t\t@property(';
                         this._observerPropertySignature += getStringFromObject(propObj);
@@ -1244,7 +1244,7 @@ var RedPill;
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_2) {
-                                var objLiteralObj = getObjectLiteralString(objExp);
+                                var objLiteralObj = getObjectLiteralString(objExp, _this.sourceFile);
                                 _this._params = objLiteralObj.str;
                                 insideProperty_2 = true;
                             }
@@ -1289,7 +1289,7 @@ var RedPill;
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_3) {
-                                var objLiteralObj = RedPill.getObjectLiteralString(objExp);
+                                var objLiteralObj = RedPill.getObjectLiteralString(objExp, _this.sourceFile);
                                 _this._type = objLiteralObj.type;
                                 insideProperty_3 = true;
                             }
@@ -1360,7 +1360,7 @@ var RedPill;
                                 insideProperty_4 = true;
                             }
                             else {
-                                _this._valueObjectParams = RedPill.getObjectLiteralString(objExp).str;
+                                _this._valueObjectParams = RedPill.getObjectLiteralString(objExp, _this.sourceFile).str;
                             }
                         }
                         ts.forEachChild(childNode, parseChildren_8);
@@ -1523,20 +1523,20 @@ var RedPill;
         return str.replace(/\s*/g, '');
     }
     RedPill.trimAllWhitespace = trimAllWhitespace;
-    function getObjectLiteralString(objExp) {
+    function getObjectLiteralString(objExp, sourceFile) {
         var objLiteralObj = {};
         if (objExp && objExp.properties && objExp.properties.length > 0) {
             var paramStr = '{\n';
             for (var i = 0; i < objExp.properties.length; i++) {
                 var propProperty = objExp.properties[i];
-                var propPropertyKey = propProperty.name.getText(this.sourceFile);
-                paramStr += '\t' + propProperty.name.getText(this.sourceFile);
+                var propPropertyKey = propProperty.name.getText(sourceFile);
+                paramStr += '\t' + propProperty.name.getText(sourceFile);
                 paramStr += ': ';
-                paramStr += propProperty.initializer.getText(this.sourceFile);
+                paramStr += propProperty.initializer.getText(sourceFile);
                 paramStr += (i + 1) < objExp.properties.length ? ',' : '';
                 paramStr += '\n';
                 if (propPropertyKey === 'type') {
-                    objLiteralObj.type = propProperty.initializer.getText(this.sourceFile);
+                    objLiteralObj.type = propProperty.initializer.getText(sourceFile);
                 }
             }
             paramStr += '}';
@@ -1565,7 +1565,7 @@ var RedPill;
         return objStr;
     }
     RedPill.getStringFromObject = getStringFromObject;
-    function getObjectFromString(objectStr) {
+    function getObjectFromString(objectStr, sourceFile) {
         var params = {};
         var partsArr = objectStr ? objectStr.split(',') : [];
         for (var i = 0; i < partsArr.length; i++) {

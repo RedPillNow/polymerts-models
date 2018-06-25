@@ -204,9 +204,9 @@ export declare module RedPill {
     function trimLeft(str: any): string;
     function trimTabs(str: any): string;
     function trimAllWhitespace(str: any): string;
-    function getObjectLiteralString(objExp: ts.ObjectLiteralExpression): any;
+    function getObjectLiteralString(objExp: ts.ObjectLiteralExpression, sourceFile: ts.SourceFile): any;
     function getStringFromObject(obj: any): string;
-    function getObjectFromString(objectStr: string): any;
+    function getObjectFromString(objectStr: string, sourceFile: ts.SourceFile): any;
     function getArrayFromString(arrayStr: string): any;
     function getPathInfo(fileName: string, docPath: string): PathInfo;
     function getStartLineNumber(node: ts.Node): number;

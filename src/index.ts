@@ -53,6 +53,7 @@ export module RedPill {
 		private _fileName: string;
 		private _filePath: string;
 		private _startLineNum: number;
+		private _sourceFile: ts.SourceFile;
 		private _tsNode: ts.Node;
 		private _warnings: Warning[] = [];
 
@@ -71,8 +72,8 @@ export module RedPill {
 						for (let i = 0; i < tsNodeAny.jsDoc[0].tags.length; i++) {
 							let tag = tsNodeAny.jsDoc[0].tags[i]; // Tag ts.Node
 							let tagName = '@' + tag.tagName.text; // The text = of the tag '@param'
-							let tagNameType = tag.typeExpression ? tag.typeExpression.getText() : tag.comment;
-							let tagTextName = tag.name ? tag.name.getText() : '';
+							let tagNameType = tag.typeExpression ? tag.typeExpression.getText(this.sourceFile) : tag.comment;
+							let tagTextName = tag.name ? tag.name.getText(this.sourceFile) : '';
 							let tagComment = tag.comment ? tag.comment : '';
 							tagName += ' ' + tagNameType; // The type = @param '{string}'
 							tagName += ' ' + tagTextName; // The name = @param {string} 'foo'
@@ -140,6 +141,17 @@ export module RedPill {
 
 		set startLineNum(startLineNum) {
 			this._startLineNum = startLineNum;
+		}
+		/**
+		 * The associated source file for this program part
+		 * @type {ts.SourceFile}
+		 */
+		get sourceFile(): ts.SourceFile {
+			return this._sourceFile;
+		}
+
+		set sourceFile(sourceFile: ts.SourceFile) {
+			this._sourceFile = sourceFile;
 		}
 		/**
 		 * The node for this element
@@ -272,8 +284,8 @@ export module RedPill {
 				let behaviors = [];
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
-					let behaviorMatch = /\s*(?:behavior)\s*\((...*)\)/.exec(exp.getText());
+					let expText = exp.getText(this.sourceFile);
+					let behaviorMatch = /\s*(?:behavior)\s*\((...*)\)/.exec(exp.getText(this.sourceFile));
 					if (behaviorMatch && behaviorMatch.length > 0) {
 						let behave: IncludedBehavior = new IncludedBehavior();
 						behave.tsNode = decorator;
@@ -296,7 +308,7 @@ export module RedPill {
 		get className(): string {
 			if (!this._className && this.tsNode) {
 				let clazz: ts.ClassDeclaration = <ts.ClassDeclaration>this.tsNode;
-				this._className = clazz.name.getText();
+				this._className = clazz.name.getText(this.sourceFile);
 			}
 			return this._className;
 		}
@@ -314,8 +326,9 @@ export module RedPill {
 				let computedProps = [];
 				for (let i = 0; i < computedDeclarations.length; i++) {
 					let computedPropNode = computedDeclarations[i];
-					if (isComputedProperty(computedPropNode)) {
+					if (isComputedProperty(computedPropNode, this.sourceFile)) {
 						let computedProperty = new ComputedProperty(computedPropNode, this);
+						computedProperty.sourceFile = this.sourceFile;
 						computedProps.push(computedProperty);
 					}
 				}
@@ -353,7 +366,7 @@ export module RedPill {
 			if (!this._decorator && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._decorator = decorator;
@@ -371,7 +384,7 @@ export module RedPill {
 				let classDecl = <ts.ClassDeclaration>this.tsNode;
 				let heritageNode = <ts.HeritageClause>classDecl.heritageClauses[0];
 				let propAccessExp = <ts.PropertyAccessExpression>heritageNode.types[0].expression;
-				this.extendsClass = propAccessExp.expression.getText() + '.' + propAccessExp.name.getText();
+				this.extendsClass = propAccessExp.expression.getText(this.sourceFile) + '.' + propAccessExp.name.getText(this.sourceFile);
 			}
 			return this._extendsClass;
 		}
@@ -405,8 +418,9 @@ export module RedPill {
 				let listeners = [];
 				for (let i = 0; i < listenerDeclarations.length; i++) {
 					let listenerNode = listenerDeclarations[i];
-					if (isListener(listenerNode)) {
+					if (isListener(listenerNode, this.sourceFile)) {
 						let listener = new Listener(listenerNode);
+						listener.sourceFile = this.sourceFile;
 						listeners.push(listener);
 					}
 				}
@@ -429,8 +443,9 @@ export module RedPill {
 				let methods = [];
 				for (let i = 0; i < methodDeclarations.length; i++) {
 					let methodNode = methodDeclarations[i];
-					if (!isObserver(methodNode) && !isListener(methodNode) && !isComputedProperty(methodNode)) {
+					if (!isObserver(methodNode, this.sourceFile) && !isListener(methodNode, this.sourceFile) && !isComputedProperty(methodNode, this.sourceFile)) {
 						let func = new Function(methodNode);
+						func.sourceFile = this.sourceFile;
 						methods.push(func);
 					}
 				}
@@ -450,7 +465,7 @@ export module RedPill {
 			if (!this._name && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._name = componentMatch[1];
@@ -484,7 +499,7 @@ export module RedPill {
 				let obs = [];
 				for (let i = 0; i < obsDeclarations.length; i++) {
 					let obsNode = obsDeclarations[i];
-					if (isObserver(obsNode)) {
+					if (isObserver(obsNode, this.sourceFile)) {
 						let observer = new Observer(obsNode, this);
 						obs.push(observer);
 					}
@@ -717,7 +732,7 @@ export module RedPill {
 				}else if (this.tsNode.kind === ts.SyntaxKind.ArrowFunction) {
 					methodNode = <ts.ArrowFunction> this.tsNode;
 				}
-				this._methodName = methodNode && methodNode.name ? methodNode.name.getText() : null;
+				this._methodName = methodNode && methodNode.name ? methodNode.name.getText(this.sourceFile) : null;
 			}
 			return this._methodName;
 		}
@@ -737,7 +752,7 @@ export module RedPill {
 				for (let i = 0; i < paramNodes.length; i++) {
 					let paramNode: ts.ParameterDeclaration = <ts.ParameterDeclaration>paramNodes[i];
 					if (paramNode.parent === this.tsNode) {
-						params.push(paramNode.getText().replace(/\??:\s*[a-zA-Z]*/g, ''));
+						params.push(paramNode.getText(this.sourceFile).replace(/\??:\s*[a-zA-Z]*/g, ''));
 					}
 				}
 				this._parameters = params;
@@ -838,7 +853,7 @@ export module RedPill {
 			if (!this._decorator && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /(\listen\(([\w.\-'"]*)\))/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._decorator = decorator;
@@ -876,11 +891,11 @@ export module RedPill {
 							switch (decoratorChildNode.kind) {
 								case ts.SyntaxKind.StringLiteral:
 									let listenerStrNode = <ts.StringLiteral>decoratorChildNode;
-									this._eventDeclaration = listenerStrNode.getText().replace(/['"`]/g,'');
+									this._eventDeclaration = listenerStrNode.getText(this.sourceFile).replace(/['"`]/g,'');
 									break;
 								case ts.SyntaxKind.PropertyAccessExpression:
 									let listenerPropAccExp = <ts.PropertyAccessExpression>decoratorChildNode;
-									this._eventDeclaration = listenerPropAccExp.getText().replace(/['"`]/g,'');
+									this._eventDeclaration = listenerPropAccExp.getText(this.sourceFile).replace(/['"`]/g,'');
 									break;
 							};
 							ts.forEachChild(decoratorChildNode, parseChildren);
@@ -904,7 +919,7 @@ export module RedPill {
 			if (!this._eventName && this.tsNode) {
 				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
 				this._eventName = sigArr[1] || null;
-				this._eventName = this._eventName.replace(/['"`]/g, '');
+				this._eventName = this._eventName ? this._eventName.replace(/['"`]/g, '') : null;
 			}
 			return this._eventName;
 		}
@@ -959,7 +974,7 @@ export module RedPill {
 		get methodName(): string {
 			if (!this._methodName && this.tsNode) {
 				let methodNode: ts.MethodDeclaration = <ts.MethodDeclaration>this.tsNode;
-				this._methodName = methodNode.name.getText();
+				this._methodName = methodNode.name.getText(this.sourceFile);
 			}
 			return this._methodName;
 		}
@@ -1084,7 +1099,7 @@ export module RedPill {
 			if (!this._decorator && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /(\observe\(([a-zA-Z0-9:,\s'".]*)?\))/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._decorator = decorator;
@@ -1142,7 +1157,7 @@ export module RedPill {
 		get methodName(): string {
 			if (!this._methodName && this.tsNode) {
 				let methodNode: ts.MethodDeclaration = <ts.MethodDeclaration>this.tsNode;
-				this._methodName = methodNode.name.getText();
+				this._methodName = methodNode.name.getText(this.sourceFile);
 			}
 			return this._methodName;
 		}
@@ -1204,7 +1219,7 @@ export module RedPill {
 						let parseChildren = (decoratorChildNode: ts.Node) => {
 							if (decoratorChildNode.kind === ts.SyntaxKind.StringLiteral) {
 								let observerStrNode = <ts.StringLiteral>decoratorChildNode;
-								let propsStr = observerStrNode.getText();
+								let propsStr = observerStrNode.getText(this.sourceFile);
 								propsStr = propsStr.replace(/[\s']*/g, '');
 								if (propsStr.indexOf(',') > -1) {
 									props = props.concat(propsStr.split(','));
@@ -1281,7 +1296,7 @@ export module RedPill {
 			if (!this._decorator && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /(\property\s*\(({[a-zA-Z0-9:,\s]*})\)\s*([\w\W]*);)/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._decorator = decorator;
@@ -1380,8 +1395,10 @@ export module RedPill {
 		 */
 		get name(): string {
 			if (!this._name && this.tsNode) {
-				let propNode: ts.PropertyDeclaration = <ts.PropertyDeclaration>this.tsNode;
-				this._name = propNode.name.getText();
+				if (ts.isPropertyDeclaration(this.tsNode)) {
+					let propNode: ts.PropertyDeclaration = <ts.PropertyDeclaration>this.tsNode;
+					this._name = propNode.name ? propNode.name.getText(this.sourceFile) : null;
+				}
 			}
 			return this._name;
 		}
@@ -1442,7 +1459,7 @@ export module RedPill {
 					this._polymerIronPageSignature = comment;
 					this._polymerIronPageSignature += '\t\t\t' + nameParts[0];
 					this._polymerIronPageSignature += ': ';
-					this._polymerIronPageSignature += objDec.getText();
+					this._polymerIronPageSignature += objDec.getText(this.sourceFile);
 				}
 			}
 			return this._polymerIronPageSignature;
@@ -1484,7 +1501,7 @@ export module RedPill {
 				let parseChildren = (childNode: ts.Node) => {
 					if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
 						let arrayLiteral = <ts.ArrayLiteralExpression>childNode;
-						this._valueArrayParams = arrayLiteral.getText();
+						this._valueArrayParams = arrayLiteral.getText(this.sourceFile);
 					}
 					ts.forEachChild(childNode, parseChildren);
 				}
@@ -1583,7 +1600,7 @@ export module RedPill {
 			if (!this._decorator && this.tsNode) {
 				this.tsNode.decorators.forEach((decorator: ts.Decorator) => {
 					let exp: ts.Expression = decorator.expression;
-					let expText = exp.getText();
+					let expText = exp.getText(this.sourceFile);
 					let componentMatch = /(\computed\(({[a-zA-Z0-9:,\s]*})?\))/.exec(expText);
 					if (componentMatch && componentMatch.length > 0) {
 						this._decorator = decorator;
@@ -1601,7 +1618,7 @@ export module RedPill {
 		get derivedMethodName(): string {
 			if (!this._derivedMethodName && this.tsNode) {
 				let methodNode = <ts.MethodDeclaration>this.tsNode;
-				this._derivedMethodName = '_get' + capitalizeFirstLetter(methodNode.name.getText().replace(/_/g, ''));
+				this._derivedMethodName = '_get' + capitalizeFirstLetter(methodNode.name.getText(this.sourceFile).replace(/_/g, ''));
 			}
 			return this._derivedMethodName;
 		}
@@ -1633,7 +1650,7 @@ export module RedPill {
 		get methodName(): string {
 			if (!this._methodName && this.tsNode) {
 				let methodNode = <ts.MethodDeclaration>this.tsNode;
-				this._methodName = methodNode.name.getText();
+				this._methodName = methodNode.name.getText(this.sourceFile);
 			}
 			return this._methodName;
 		}
@@ -1759,14 +1776,14 @@ export module RedPill {
 			let paramStr = '{\n';
 			for (let i = 0; i < objExp.properties.length; i++) {
 				let propProperty: ts.PropertyAssignment = (<ts.PropertyAssignment>objExp.properties[i]);
-				let propPropertyKey = propProperty.name.getText();
-				paramStr += '\t' + propProperty.name.getText();
+				let propPropertyKey = propProperty.name.getText(this.sourceFile);
+				paramStr += '\t' + propProperty.name.getText(this.sourceFile);
 				paramStr += ': ';
-				paramStr += propProperty.initializer.getText();
+				paramStr += propProperty.initializer.getText(this.sourceFile);
 				paramStr += (i + 1) < objExp.properties.length ? ',' : '';
 				paramStr += '\n';
 				if (propPropertyKey === 'type') {
-					objLiteralObj.type = propProperty.initializer.getText();
+					objLiteralObj.type = propProperty.initializer.getText(this.sourceFile);
 				}
 			}
 			paramStr += '}';
@@ -1902,7 +1919,7 @@ export module RedPill {
 		let isComponent = false;
 		if (ts.isClassDeclaration(parentNode) && component) {
 			let classDecl = <ts.ClassDeclaration>parentNode;
-			if (classDecl.name.getText() === component.className) {
+			if (classDecl.name.getText(component.sourceFile) === component.className) {
 				isComponent = true;
 			}
 		}
@@ -1972,7 +1989,7 @@ export module RedPill {
 	 * @param {ts.ClassDeclaration} node
 	 * @returns {boolean}
 	 */
-	export function isComponent(node: ts.ClassDeclaration): boolean {
+	export function isComponent(node: ts.ClassDeclaration, sourceFile: ts.SourceFile): boolean {
 		let isComponent = false;
 		if (node.decorators && node.decorators.length > 0) {
 			for (let i = 0; i < node.decorators.length; i++) {
@@ -1982,7 +1999,7 @@ export module RedPill {
 				console.log('val.expression, getSourceFile=', exp.getSourceFile());
 				console.log('val.expression, val.getSourceFile=', val.getSourceFile());
 				console.log('val.expression, node.getSourceFile=', node.getSourceFile());
-				let expText = exp.getText();
+				let expText = exp.getText(sourceFile);
 				let decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
 				if (decoratorMatch && decoratorMatch.length > 0) {
 					isComponent = true;
@@ -1999,12 +2016,12 @@ export module RedPill {
 	 * @param {ts.MethodDeclaration} node
 	 * @returns {boolean}
 	 */
-	export function isComputedProperty(node: ts.MethodDeclaration): boolean {
+	export function isComputedProperty(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean {
 		let isComputed = false;
 		if (node && node.decorators && node.decorators.length > 0) {
 			node.decorators.forEach((val: ts.Decorator, idx: number) => {
 				let exp = val.expression;
-				let expText = exp.getText();
+				let expText = exp.getText(sourceFile);
 				let decoratorMatch = /\s*(?:computed)\s*\((?:\{*(.*)\}*)\)/.exec(expText);
 				isComputed = decoratorMatch && decoratorMatch.length > 0 ? true : false;
 			});
@@ -2031,12 +2048,12 @@ export module RedPill {
 	 * @param {ts.MethodDeclaration} node
 	 * @returns {boolean}
 	 */
-	export function isListener(node: ts.MethodDeclaration): boolean {
+	export function isListener(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean {
 		let isListener = false;
 		if (node && node.decorators && node.decorators.length > 0) {
 			node.decorators.forEach((val: ts.Decorator, idx: number) => {
 				let exp = val.expression;
-				let expText = exp.getText();
+				let expText = exp.getText(sourceFile);
 				let decoratorMatch = /\s*(?:listen)\s*\((?:\{*(.*)\}*)\)/.exec(expText);
 				isListener = decoratorMatch && decoratorMatch.length > 0 ? true : false;
 			});
@@ -2050,12 +2067,12 @@ export module RedPill {
 	 * @param {ts.MethodDeclaration} node
 	 * @returns {boolean}
 	 */
-	export function isObserver(node: ts.MethodDeclaration): boolean {
+	export function isObserver(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean {
 		let isObserver = false;
 		if (node && node.decorators && node.decorators.length > 0) {
 			node.decorators.forEach((val: ts.Decorator, idx: number) => {
 				let exp = val.expression;
-				let expText = exp.getText();
+				let expText = exp.getText(sourceFile);
 				let decoratorMatch = /\s*(?:observe)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
 				isObserver = decoratorMatch && decoratorMatch.length > 0 ? true : false;
 			});

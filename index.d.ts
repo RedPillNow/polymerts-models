@@ -15,6 +15,7 @@ export declare module RedPill {
         private _fileName;
         private _filePath;
         private _startLineNum;
+        private _sourceFile;
         private _tsNode;
         private _warnings;
         comment: Comment;
@@ -22,6 +23,7 @@ export declare module RedPill {
         readonly fileName: string;
         filePath: string;
         startLineNum: number;
+        sourceFile: ts.SourceFile;
         tsNode: ts.Node;
         warnings: Warning[];
         addWarning(warningText: any): void;
@@ -213,10 +215,10 @@ export declare module RedPill {
     function isNodeComponentChild(parentNode: ts.Node, component: Component): boolean;
     function getMethodFromListener(listener: Listener): Function;
     function getMethodFromComputed(computed: ComputedProperty): Function;
-    function isComponent(node: ts.ClassDeclaration): boolean;
-    function isComputedProperty(node: ts.MethodDeclaration): boolean;
+    function isComponent(node: ts.ClassDeclaration, sourceFile: ts.SourceFile): boolean;
+    function isComputedProperty(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean;
     function isDeclaredProperty(node: ts.PropertyDeclaration): boolean;
-    function isListener(node: ts.MethodDeclaration): boolean;
-    function isObserver(node: ts.MethodDeclaration): boolean;
+    function isListener(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean;
+    function isObserver(node: ts.MethodDeclaration, sourceFile: ts.SourceFile): boolean;
     function getTypescriptType(property: Property): string;
 }

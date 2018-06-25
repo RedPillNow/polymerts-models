@@ -57,8 +57,8 @@ var RedPill;
                             for (var i = 0; i < tsNodeAny.jsDoc[0].tags.length; i++) {
                                 var tag = tsNodeAny.jsDoc[0].tags[i];
                                 var tagName = '@' + tag.tagName.text;
-                                var tagNameType = tag.typeExpression ? tag.typeExpression.getText() : tag.comment;
-                                var tagTextName = tag.name ? tag.name.getText() : '';
+                                var tagNameType = tag.typeExpression ? tag.typeExpression.getText(this.sourceFile) : tag.comment;
+                                var tagTextName = tag.name ? tag.name.getText(this.sourceFile) : '';
                                 var tagComment = tag.comment ? tag.comment : '';
                                 tagName += ' ' + tagNameType;
                                 tagName += ' ' + tagTextName;
@@ -125,6 +125,16 @@ var RedPill;
             },
             set: function (startLineNum) {
                 this._startLineNum = startLineNum;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ProgramPart.prototype, "sourceFile", {
+            get: function () {
+                return this._sourceFile;
+            },
+            set: function (sourceFile) {
+                this._sourceFile = sourceFile;
             },
             enumerable: true,
             configurable: true
@@ -224,12 +234,13 @@ var RedPill;
         }
         Object.defineProperty(Component.prototype, "behaviors", {
             get: function () {
+                var _this = this;
                 if ((!this._behaviors || this._behaviors.length === 0) && this.tsNode) {
                     var behaviors_1 = [];
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
-                        var behaviorMatch = /\s*(?:behavior)\s*\((...*)\)/.exec(exp.getText());
+                        var expText = exp.getText(_this.sourceFile);
+                        var behaviorMatch = /\s*(?:behavior)\s*\((...*)\)/.exec(exp.getText(_this.sourceFile));
                         if (behaviorMatch && behaviorMatch.length > 0) {
                             var behave = new IncludedBehavior();
                             behave.tsNode = decorator;
@@ -251,7 +262,7 @@ var RedPill;
             get: function () {
                 if (!this._className && this.tsNode) {
                     var clazz = this.tsNode;
-                    this._className = clazz.name.getText();
+                    this._className = clazz.name.getText(this.sourceFile);
                 }
                 return this._className;
             },
@@ -268,8 +279,9 @@ var RedPill;
                     var computedProps = [];
                     for (var i = 0; i < computedDeclarations.length; i++) {
                         var computedPropNode = computedDeclarations[i];
-                        if (isComputedProperty(computedPropNode)) {
+                        if (isComputedProperty(computedPropNode, this.sourceFile)) {
                             var computedProperty = new ComputedProperty(computedPropNode, this);
+                            computedProperty.sourceFile = this.sourceFile;
                             computedProps.push(computedProperty);
                         }
                     }
@@ -304,7 +316,7 @@ var RedPill;
                 if (!this._decorator && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._decorator = decorator;
@@ -322,7 +334,7 @@ var RedPill;
                     var classDecl = this.tsNode;
                     var heritageNode = classDecl.heritageClauses[0];
                     var propAccessExp = heritageNode.types[0].expression;
-                    this.extendsClass = propAccessExp.expression.getText() + '.' + propAccessExp.name.getText();
+                    this.extendsClass = propAccessExp.expression.getText(this.sourceFile) + '.' + propAccessExp.name.getText(this.sourceFile);
                 }
                 return this._extendsClass;
             },
@@ -354,8 +366,9 @@ var RedPill;
                     var listeners = [];
                     for (var i = 0; i < listenerDeclarations.length; i++) {
                         var listenerNode = listenerDeclarations[i];
-                        if (isListener(listenerNode)) {
+                        if (isListener(listenerNode, this.sourceFile)) {
                             var listener = new Listener(listenerNode);
+                            listener.sourceFile = this.sourceFile;
                             listeners.push(listener);
                         }
                     }
@@ -376,8 +389,9 @@ var RedPill;
                     var methods = [];
                     for (var i = 0; i < methodDeclarations.length; i++) {
                         var methodNode = methodDeclarations[i];
-                        if (!isObserver(methodNode) && !isListener(methodNode) && !isComputedProperty(methodNode)) {
+                        if (!isObserver(methodNode, this.sourceFile) && !isListener(methodNode, this.sourceFile) && !isComputedProperty(methodNode, this.sourceFile)) {
                             var func = new Function(methodNode);
+                            func.sourceFile = this.sourceFile;
                             methods.push(func);
                         }
                     }
@@ -397,7 +411,7 @@ var RedPill;
                 if (!this._name && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /\s*(?:component)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._name = componentMatch[1];
@@ -429,7 +443,7 @@ var RedPill;
                     var obs = [];
                     for (var i = 0; i < obsDeclarations.length; i++) {
                         var obsNode = obsDeclarations[i];
-                        if (isObserver(obsNode)) {
+                        if (isObserver(obsNode, this.sourceFile)) {
                             var observer = new Observer(obsNode, this);
                             obs.push(observer);
                         }
@@ -625,7 +639,7 @@ var RedPill;
                     else if (this.tsNode.kind === ts.SyntaxKind.ArrowFunction) {
                         methodNode = this.tsNode;
                     }
-                    this._methodName = methodNode && methodNode.name ? methodNode.name.getText() : null;
+                    this._methodName = methodNode && methodNode.name ? methodNode.name.getText(this.sourceFile) : null;
                 }
                 return this._methodName;
             },
@@ -644,7 +658,7 @@ var RedPill;
                     for (var i = 0; i < paramNodes.length; i++) {
                         var paramNode = paramNodes[i];
                         if (paramNode.parent === this.tsNode) {
-                            params.push(paramNode.getText().replace(/\??:\s*[a-zA-Z]*/g, ''));
+                            params.push(paramNode.getText(this.sourceFile).replace(/\??:\s*[a-zA-Z]*/g, ''));
                         }
                     }
                     this._parameters = params;
@@ -724,7 +738,7 @@ var RedPill;
                 if (!this._decorator && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /(\listen\(([\w.\-'"]*)\))/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._decorator = decorator;
@@ -762,11 +776,11 @@ var RedPill;
                                 switch (decoratorChildNode.kind) {
                                     case ts.SyntaxKind.StringLiteral:
                                         var listenerStrNode = decoratorChildNode;
-                                        _this._eventDeclaration = listenerStrNode.getText().replace(/['"`]/g, '');
+                                        _this._eventDeclaration = listenerStrNode.getText(_this.sourceFile).replace(/['"`]/g, '');
                                         break;
                                     case ts.SyntaxKind.PropertyAccessExpression:
                                         var listenerPropAccExp = decoratorChildNode;
-                                        _this._eventDeclaration = listenerPropAccExp.getText().replace(/['"`]/g, '');
+                                        _this._eventDeclaration = listenerPropAccExp.getText(_this.sourceFile).replace(/['"`]/g, '');
                                         break;
                                 }
                                 ;
@@ -789,7 +803,7 @@ var RedPill;
                 if (!this._eventName && this.tsNode) {
                     var sigArr = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
                     this._eventName = sigArr[1] || null;
-                    this._eventName = this._eventName.replace(/['"`]/g, '');
+                    this._eventName = this._eventName ? this._eventName.replace(/['"`]/g, '') : null;
                 }
                 return this._eventName;
             },
@@ -846,7 +860,7 @@ var RedPill;
             get: function () {
                 if (!this._methodName && this.tsNode) {
                     var methodNode = this.tsNode;
-                    this._methodName = methodNode.name.getText();
+                    this._methodName = methodNode.name.getText(this.sourceFile);
                 }
                 return this._methodName;
             },
@@ -947,7 +961,7 @@ var RedPill;
                 if (!this._decorator && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /(\observe\(([a-zA-Z0-9:,\s'".]*)?\))/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._decorator = decorator;
@@ -1002,7 +1016,7 @@ var RedPill;
             get: function () {
                 if (!this._methodName && this.tsNode) {
                     var methodNode = this.tsNode;
-                    this._methodName = methodNode.name.getText();
+                    this._methodName = methodNode.name.getText(this.sourceFile);
                 }
                 return this._methodName;
             },
@@ -1041,6 +1055,7 @@ var RedPill;
         });
         Object.defineProperty(Observer.prototype, "params", {
             get: function () {
+                var _this = this;
                 if (!this._params && this.tsNode) {
                     var props_1 = [];
                     if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
@@ -1048,7 +1063,7 @@ var RedPill;
                             var parseChildren = function (decoratorChildNode) {
                                 if (decoratorChildNode.kind === ts.SyntaxKind.StringLiteral) {
                                     var observerStrNode = decoratorChildNode;
-                                    var propsStr = observerStrNode.getText();
+                                    var propsStr = observerStrNode.getText(_this.sourceFile);
                                     propsStr = propsStr.replace(/[\s']*/g, '');
                                     if (propsStr.indexOf(',') > -1) {
                                         props_1 = props_1.concat(propsStr.split(','));
@@ -1109,7 +1124,7 @@ var RedPill;
                 if (!this._decorator && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /(\property\s*\(({[a-zA-Z0-9:,\s]*})\)\s*([\w\W]*);)/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._decorator = decorator;
@@ -1207,8 +1222,10 @@ var RedPill;
         Object.defineProperty(Property.prototype, "name", {
             get: function () {
                 if (!this._name && this.tsNode) {
-                    var propNode = this.tsNode;
-                    this._name = propNode.name.getText();
+                    if (ts.isPropertyDeclaration(this.tsNode)) {
+                        var propNode = this.tsNode;
+                        this._name = propNode.name ? propNode.name.getText(this.sourceFile) : null;
+                    }
                 }
                 return this._name;
             },
@@ -1255,7 +1272,7 @@ var RedPill;
                         this._polymerIronPageSignature = comment;
                         this._polymerIronPageSignature += '\t\t\t' + nameParts[0];
                         this._polymerIronPageSignature += ': ';
-                        this._polymerIronPageSignature += objDec.getText();
+                        this._polymerIronPageSignature += objDec.getText(this.sourceFile);
                     }
                 }
                 return this._polymerIronPageSignature;
@@ -1296,7 +1313,7 @@ var RedPill;
                     var parseChildren_6 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
                             var arrayLiteral = childNode;
-                            _this._valueArrayParams = arrayLiteral.getText();
+                            _this._valueArrayParams = arrayLiteral.getText(_this.sourceFile);
                         }
                         ts.forEachChild(childNode, parseChildren_6);
                     };
@@ -1385,7 +1402,7 @@ var RedPill;
                 if (!this._decorator && this.tsNode) {
                     this.tsNode.decorators.forEach(function (decorator) {
                         var exp = decorator.expression;
-                        var expText = exp.getText();
+                        var expText = exp.getText(_this.sourceFile);
                         var componentMatch = /(\computed\(({[a-zA-Z0-9:,\s]*})?\))/.exec(expText);
                         if (componentMatch && componentMatch.length > 0) {
                             _this._decorator = decorator;
@@ -1401,7 +1418,7 @@ var RedPill;
             get: function () {
                 if (!this._derivedMethodName && this.tsNode) {
                     var methodNode = this.tsNode;
-                    this._derivedMethodName = '_get' + capitalizeFirstLetter(methodNode.name.getText().replace(/_/g, ''));
+                    this._derivedMethodName = '_get' + capitalizeFirstLetter(methodNode.name.getText(this.sourceFile).replace(/_/g, ''));
                 }
                 return this._derivedMethodName;
             },
@@ -1431,7 +1448,7 @@ var RedPill;
             get: function () {
                 if (!this._methodName && this.tsNode) {
                     var methodNode = this.tsNode;
-                    this._methodName = methodNode.name.getText();
+                    this._methodName = methodNode.name.getText(this.sourceFile);
                 }
                 return this._methodName;
             },
@@ -1512,14 +1529,14 @@ var RedPill;
             var paramStr = '{\n';
             for (var i = 0; i < objExp.properties.length; i++) {
                 var propProperty = objExp.properties[i];
-                var propPropertyKey = propProperty.name.getText();
-                paramStr += '\t' + propProperty.name.getText();
+                var propPropertyKey = propProperty.name.getText(this.sourceFile);
+                paramStr += '\t' + propProperty.name.getText(this.sourceFile);
                 paramStr += ': ';
-                paramStr += propProperty.initializer.getText();
+                paramStr += propProperty.initializer.getText(this.sourceFile);
                 paramStr += (i + 1) < objExp.properties.length ? ',' : '';
                 paramStr += '\n';
                 if (propPropertyKey === 'type') {
-                    objLiteralObj.type = propProperty.initializer.getText();
+                    objLiteralObj.type = propProperty.initializer.getText(this.sourceFile);
                 }
             }
             paramStr += '}';
@@ -1611,7 +1628,7 @@ var RedPill;
         var isComponent = false;
         if (ts.isClassDeclaration(parentNode) && component) {
             var classDecl = parentNode;
-            if (classDecl.name.getText() === component.className) {
+            if (classDecl.name.getText(component.sourceFile) === component.className) {
                 isComponent = true;
             }
         }
@@ -1665,7 +1682,7 @@ var RedPill;
         return computedMethod;
     }
     RedPill.getMethodFromComputed = getMethodFromComputed;
-    function isComponent(node) {
+    function isComponent(node, sourceFile) {
         var isComponent = false;
         if (node.decorators && node.decorators.length > 0) {
             for (var i = 0; i < node.decorators.length; i++) {
@@ -1675,7 +1692,7 @@ var RedPill;
                 console.log('val.expression, getSourceFile=', exp.getSourceFile());
                 console.log('val.expression, val.getSourceFile=', val.getSourceFile());
                 console.log('val.expression, node.getSourceFile=', node.getSourceFile());
-                var expText = exp.getText();
+                var expText = exp.getText(sourceFile);
                 var decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
                 if (decoratorMatch && decoratorMatch.length > 0) {
                     isComponent = true;
@@ -1686,12 +1703,12 @@ var RedPill;
         return isComponent;
     }
     RedPill.isComponent = isComponent;
-    function isComputedProperty(node) {
+    function isComputedProperty(node, sourceFile) {
         var isComputed = false;
         if (node && node.decorators && node.decorators.length > 0) {
             node.decorators.forEach(function (val, idx) {
                 var exp = val.expression;
-                var expText = exp.getText();
+                var expText = exp.getText(sourceFile);
                 var decoratorMatch = /\s*(?:computed)\s*\((?:\{*(.*)\}*)\)/.exec(expText);
                 isComputed = decoratorMatch && decoratorMatch.length > 0 ? true : false;
             });
@@ -1707,12 +1724,12 @@ var RedPill;
         return isDeclaredProp;
     }
     RedPill.isDeclaredProperty = isDeclaredProperty;
-    function isListener(node) {
+    function isListener(node, sourceFile) {
         var isListener = false;
         if (node && node.decorators && node.decorators.length > 0) {
             node.decorators.forEach(function (val, idx) {
                 var exp = val.expression;
-                var expText = exp.getText();
+                var expText = exp.getText(sourceFile);
                 var decoratorMatch = /\s*(?:listen)\s*\((?:\{*(.*)\}*)\)/.exec(expText);
                 isListener = decoratorMatch && decoratorMatch.length > 0 ? true : false;
             });
@@ -1720,12 +1737,12 @@ var RedPill;
         return isListener;
     }
     RedPill.isListener = isListener;
-    function isObserver(node) {
+    function isObserver(node, sourceFile) {
         var isObserver = false;
         if (node && node.decorators && node.decorators.length > 0) {
             node.decorators.forEach(function (val, idx) {
                 var exp = val.expression;
-                var expText = exp.getText();
+                var expText = exp.getText(sourceFile);
                 var decoratorMatch = /\s*(?:observe)\s*\((?:['"]{1}(.*)['"]{1})\)/.exec(expText);
                 isObserver = decoratorMatch && decoratorMatch.length > 0 ? true : false;
             });

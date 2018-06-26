@@ -195,11 +195,29 @@ var RedPill;
             get: function () {
                 return this._decorator;
             },
+            set: function (decorator) {
+                this._decorator = decorator;
+            },
             enumerable: true,
             configurable: true
         });
         Object.defineProperty(IncludedBehavior.prototype, "name", {
             get: function () {
+                if (!this._name && this._decorator) {
+                    var dec = this._decorator;
+                    var callExp = dec.expression;
+                    var args = callExp.arguments;
+                    for (var i = 0; i < args.length; i++) {
+                        var arg = args[i];
+                        if (ts.isElementAccessExpression(arg)) {
+                            arg = arg;
+                            this._name = arg.getText(this.sourceFile);
+                            console.log('Models.IncludedBehavior.name=', this._name);
+                            break;
+                        }
+                    }
+                    this._name = dec.expression.getText(this.sourceFile);
+                }
                 return this._name;
             },
             set: function (name) {

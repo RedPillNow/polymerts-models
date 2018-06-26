@@ -224,7 +224,26 @@ export module RedPill {
 			return this._decorator;
 		}
 
+		set decorator(decorator) {
+			this._decorator = decorator;
+		}
+
 		get name(): string {
+			if (!this._name && this._decorator) {
+				let dec: ts.Decorator = <ts.Decorator> this._decorator;
+				let callExp: ts.CallExpression = <ts.CallExpression> dec.expression;
+				let args = callExp.arguments;
+				for (let i = 0; i < args.length; i++) {
+					let arg = args[i];
+					if (ts.isElementAccessExpression(arg)) {
+						arg = <ts.ElementAccessExpression> arg;
+						this._name = arg.getText(this.sourceFile);
+						console.log('Models.IncludedBehavior.name=', this._name);
+						break;
+					}
+				}
+				this._name = dec.expression.getText(this.sourceFile);
+			}
 			return this._name;
 		}
 

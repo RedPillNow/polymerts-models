@@ -32,7 +32,7 @@ export declare module RedPill {
     class IncludedBehavior extends ProgramPart {
         private _name;
         private _polymerIronPageSignature;
-        readonly decorator: ts.Decorator;
+        decorator: ts.Decorator;
         name: string;
         readonly polymerIronPageSignature: string;
         toDocOnlyMarkup(): string;

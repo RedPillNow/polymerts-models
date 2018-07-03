@@ -863,7 +863,9 @@ var RedPill;
                 if (!this._method && this.tsNode) {
                     if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
                         var methodDecl = this.tsNode;
-                        this._method = new Function(methodDecl);
+                        var method = new Function(methodDecl);
+                        method.sourceFile = this.sourceFile;
+                        this._method = method;
                     }
                 }
                 return this._method;
@@ -1019,7 +1021,9 @@ var RedPill;
                 if (!this._method && this.tsNode) {
                     if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
                         var methodDecl = this.tsNode;
-                        this._method = new Function(methodDecl);
+                        var method = new Function(methodDecl);
+                        method.sourceFile = this.sourceFile;
+                        this._method = method;
                     }
                 }
                 return this._method;
@@ -1131,8 +1135,10 @@ var RedPill;
         function Property(node) {
             var _this = _super.call(this) || this;
             _this._containsValueArrayLiteral = false;
+            _this._containsValueBoolean = false;
             _this._containsValueFunction = false;
             _this._containsValueObjectDeclaration = false;
+            _this._containsValueStringLiteral = false;
             _this.tsNode = node;
             return _this;
         }
@@ -1173,7 +1179,6 @@ var RedPill;
                 if (!this._containsValueArrayLiteral && this.tsNode) {
                     var parseChildren_1 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
-                            var arrayLiteral = childNode;
                             _this._containsValueArrayLiteral = true;
                         }
                         ts.forEachChild(childNode, parseChildren_1);
@@ -1188,20 +1193,40 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Property.prototype, "containsValueBoolean", {
+            get: function () {
+                var _this = this;
+                if (!this._containsValueBoolean && this.tsNode) {
+                    var parseChildren_2 = function (childNode) {
+                        if (childNode.kind === ts.SyntaxKind.BooleanKeyword) {
+                            _this._containsValueBoolean = true;
+                        }
+                        ts.forEachChild(childNode, parseChildren_2);
+                    };
+                    parseChildren_2(this.tsNode);
+                }
+                return this._containsValueBoolean;
+            },
+            set: function (containsValueBoolean) {
+                this._containsValueBoolean = containsValueBoolean;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Property.prototype, "containsValueFunction", {
             get: function () {
                 var _this = this;
                 if (!this._containsValueFunction && this.tsNode) {
-                    var parseChildren_2 = function (childNode) {
+                    var parseChildren_3 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ArrowFunction) {
                             _this._containsValueFunction = true;
                         }
                         else if (childNode.kind === ts.SyntaxKind.MethodDeclaration) {
                             _this._containsValueFunction = true;
                         }
-                        ts.forEachChild(childNode, parseChildren_2);
+                        ts.forEachChild(childNode, parseChildren_3);
                     };
-                    parseChildren_2(this.tsNode);
+                    parseChildren_3(this.tsNode);
                 }
                 return this._containsValueFunction;
             },
@@ -1216,7 +1241,7 @@ var RedPill;
                 var _this = this;
                 if (!this._containsValueObjectDeclaration && this.tsNode) {
                     var insideProperty_1 = false;
-                    var parseChildren_3 = function (childNode) {
+                    var parseChildren_4 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             if (!insideProperty_1) {
                                 insideProperty_1 = true;
@@ -1225,14 +1250,38 @@ var RedPill;
                                 _this._containsValueObjectDeclaration = true;
                             }
                         }
-                        ts.forEachChild(childNode, parseChildren_3);
+                        ts.forEachChild(childNode, parseChildren_4);
                     };
-                    parseChildren_3(this.tsNode);
+                    parseChildren_4(this.tsNode);
                 }
                 return this._containsValueObjectDeclaration;
             },
             set: function (containsValueObjectDeclaration) {
                 this._containsValueObjectDeclaration = containsValueObjectDeclaration;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "containsValueStringLiteral", {
+            get: function () {
+                if (!this._containsValueStringLiteral && this.tsNode) {
+                    var decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+                    var objLit = decorator.expression.arguments[0];
+                    for (var i = 0; i < objLit.properties.length; i++) {
+                        var prop = objLit.properties[i];
+                        if (ts.isPropertyAssignment(prop)) {
+                            var propAssign = prop;
+                            if (propAssign.name.getText(this.sourceFile) === 'value') {
+                                var initializer = propAssign.initializer;
+                                if (ts.isStringLiteral(initializer)) {
+                                    this._containsValueStringLiteral = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                return this._containsValueStringLiteral;
             },
             enumerable: true,
             configurable: true
@@ -1258,7 +1307,7 @@ var RedPill;
                 var _this = this;
                 if (!this._params && this.tsNode) {
                     var insideProperty_2 = false;
-                    var parseChildren_4 = function (childNode) {
+                    var parseChildren_5 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_2) {
@@ -1267,9 +1316,9 @@ var RedPill;
                                 insideProperty_2 = true;
                             }
                         }
-                        ts.forEachChild(childNode, parseChildren_4);
+                        ts.forEachChild(childNode, parseChildren_5);
                     };
-                    parseChildren_4(this.tsNode);
+                    parseChildren_5(this.tsNode);
                 }
                 return this._params;
             },
@@ -1303,7 +1352,7 @@ var RedPill;
                 var _this = this;
                 if (!this._type && this.tsNode) {
                     var insideProperty_3 = false;
-                    var parseChildren_5 = function (childNode) {
+                    var parseChildren_6 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_3) {
@@ -1312,9 +1361,9 @@ var RedPill;
                                 insideProperty_3 = true;
                             }
                         }
-                        ts.forEachChild(childNode, parseChildren_5);
+                        ts.forEachChild(childNode, parseChildren_6);
                     };
-                    parseChildren_5(this.tsNode);
+                    parseChildren_6(this.tsNode);
                 }
                 return this._type;
             },
@@ -1328,14 +1377,14 @@ var RedPill;
             get: function () {
                 var _this = this;
                 if (!this._valueArrayParams && this.tsNode) {
-                    var parseChildren_6 = function (childNode) {
+                    var parseChildren_7 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
                             var arrayLiteral = childNode;
                             _this._valueArrayParams = arrayLiteral.getText(_this.sourceFile);
                         }
-                        ts.forEachChild(childNode, parseChildren_6);
+                        ts.forEachChild(childNode, parseChildren_7);
                     };
-                    parseChildren_6(this.tsNode);
+                    parseChildren_7(this.tsNode);
                 }
                 return this._valueArrayParams;
             },
@@ -1349,14 +1398,14 @@ var RedPill;
             get: function () {
                 var _this = this;
                 if (!this._valueFunction && this.tsNode) {
-                    var parseChildren_7 = function (childNode) {
+                    var parseChildren_8 = function (childNode) {
                         var childKind = childNode.kind;
                         if (childKind === ts.SyntaxKind.MethodDeclaration || childKind === ts.SyntaxKind.ArrowFunction) {
                             _this._valueFunction = new Function(childNode);
                         }
-                        ts.forEachChild(childNode, parseChildren_7);
+                        ts.forEachChild(childNode, parseChildren_8);
                     };
-                    parseChildren_7(this.tsNode);
+                    parseChildren_8(this.tsNode);
                 }
                 return this._valueFunction;
             },
@@ -1371,7 +1420,7 @@ var RedPill;
                 var _this = this;
                 if (!this._valueObjectParams && this.tsNode) {
                     var insideProperty_4 = false;
-                    var parseChildren_8 = function (childNode) {
+                    var parseChildren_9 = function (childNode) {
                         if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
                             var objExp = childNode;
                             if (!insideProperty_4) {
@@ -1381,9 +1430,9 @@ var RedPill;
                                 _this._valueObjectParams = RedPill.getObjectLiteralString(objExp, _this.sourceFile).str;
                             }
                         }
-                        ts.forEachChild(childNode, parseChildren_8);
+                        ts.forEachChild(childNode, parseChildren_9);
                     };
-                    parseChildren_8(this.tsNode);
+                    parseChildren_9(this.tsNode);
                 }
                 return this._valueObjectParams;
             },
@@ -1432,6 +1481,13 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ComputedProperty.prototype, "dependentPropNames", {
+            get: function () {
+                return this._dependentPropNames;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(ComputedProperty.prototype, "derivedMethodName", {
             get: function () {
                 if (!this._derivedMethodName && this.tsNode) {
@@ -1451,7 +1507,9 @@ var RedPill;
                 if (!this._method && this.tsNode) {
                     if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
                         var methodDecl = this.tsNode;
-                        this._method = new Function(methodDecl);
+                        var method = new Function(methodDecl);
+                        method.sourceFile = this.sourceFile;
+                        this._method = method;
                     }
                 }
                 return this._method;
@@ -1706,10 +1764,6 @@ var RedPill;
             for (var i = 0; i < node.decorators.length; i++) {
                 var val = node.decorators[i];
                 var exp = val.expression;
-                console.log('val.expression is a ', ts.SyntaxKind[exp.kind]);
-                console.log('val.expression, getSourceFile=', exp.getSourceFile());
-                console.log('val.expression, val.getSourceFile=', val.getSourceFile());
-                console.log('val.expression, node.getSourceFile=', node.getSourceFile());
                 var expText = exp.getText(sourceFile);
                 var decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
                 if (decoratorMatch && decoratorMatch.length > 0) {

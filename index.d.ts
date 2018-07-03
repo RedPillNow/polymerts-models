@@ -153,8 +153,10 @@ export declare module RedPill {
     }
     class Property extends ProgramPart {
         private _containsValueArrayLiteral;
+        private _containsValueBoolean;
         private _containsValueFunction;
         private _containsValueObjectDeclaration;
+        private _containsValueStringLiteral;
         private _name;
         protected _params: string;
         protected _polymerIronPageSignature: string;
@@ -166,8 +168,10 @@ export declare module RedPill {
         readonly decorator: ts.Decorator;
         readonly derivedComment: Comment;
         containsValueArrayLiteral: boolean;
+        containsValueBoolean: boolean;
         containsValueFunction: boolean;
         containsValueObjectDeclaration: boolean;
+        readonly containsValueStringLiteral: boolean;
         name: string;
         params: string;
         readonly polymerIronPageSignature: string;
@@ -178,6 +182,7 @@ export declare module RedPill {
     }
     class ComputedProperty extends Property {
         private _component;
+        private _dependentPropNames;
         private _derivedMethodName;
         private _method;
         private _methodName;
@@ -185,6 +190,7 @@ export declare module RedPill {
         constructor(node?: ts.Node, component?: Component);
         component: Component;
         readonly decorator: ts.Decorator;
+        readonly dependentPropNames: string[];
         derivedMethodName: string;
         method: Function;
         methodName: string;

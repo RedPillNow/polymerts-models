@@ -975,7 +975,9 @@ export module RedPill {
 			if (!this._method && this.tsNode) {
 				if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
 					let methodDecl = <ts.MethodDeclaration>this.tsNode;
-					this._method = new Function(methodDecl);
+					let method = new Function(methodDecl);
+					method.sourceFile = this.sourceFile;
+					this._method = method;
 				}
 			}
 			return this._method;
@@ -1158,7 +1160,9 @@ export module RedPill {
 			if (!this._method && this.tsNode) {
 				if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
 					let methodDecl = <ts.MethodDeclaration>this.tsNode;
-					this._method = new Function(methodDecl);
+					let method = new Function(methodDecl);
+					method.sourceFile = this.sourceFile;
+					this._method = method;
 				}
 			}
 			return this._method;
@@ -1291,8 +1295,10 @@ export module RedPill {
 	 */
 	export class Property extends ProgramPart {
 		private _containsValueArrayLiteral: boolean = false;
+		private _containsValueBoolean: boolean = false;
 		private _containsValueFunction: boolean = false;
 		private _containsValueObjectDeclaration: boolean = false;
+		private _containsValueStringLiteral: boolean = false;
 		private _name: string;
 		protected _params: string;
 		protected _polymerIronPageSignature: string;
@@ -1344,7 +1350,6 @@ export module RedPill {
 			if (!this._containsValueArrayLiteral && this.tsNode) {
 				let parseChildren = (childNode: ts.Node) => {
 					if (childNode.kind === ts.SyntaxKind.ArrayLiteralExpression) {
-						let arrayLiteral = <ts.ArrayLiteralExpression>childNode;
 						this._containsValueArrayLiteral = true;
 					}
 					ts.forEachChild(childNode, parseChildren);
@@ -1356,6 +1361,26 @@ export module RedPill {
 
 		set containsValueArrayLiteral(containsValueArrayLiteral) {
 			this._containsValueArrayLiteral = containsValueArrayLiteral;
+		}
+		/**
+		 * True if there is a value definition for a property that contains a boolean
+		 * @type {boolean}
+		 */
+		get containsValueBoolean(): boolean {
+			if (!this._containsValueBoolean && this.tsNode) {
+				let parseChildren = (childNode: ts.Node) => {
+					if (childNode.kind === ts.SyntaxKind.BooleanKeyword) {
+						this._containsValueBoolean = true;
+					}
+					ts.forEachChild(childNode, parseChildren);
+				};
+				parseChildren(this.tsNode);
+			}
+			return this._containsValueBoolean;
+		}
+
+		set containsValueBoolean(containsValueBoolean) {
+			this._containsValueBoolean = containsValueBoolean;
 		}
 		/**
 		 * True if there is a value definition for a property that contains a function
@@ -1386,7 +1411,6 @@ export module RedPill {
 		 */
 		get containsValueObjectDeclaration(): boolean {
 			if (!this._containsValueObjectDeclaration && this.tsNode) {
-				// let insideProperty = false;
 				let insideProperty = false;
 				let parseChildren = (childNode: ts.Node) => {
 					if (childNode.kind === ts.SyntaxKind.ObjectLiteralExpression) {
@@ -1405,6 +1429,27 @@ export module RedPill {
 
 		set containsValueObjectDeclaration(containsValueObjectDeclaration) {
 			this._containsValueObjectDeclaration = containsValueObjectDeclaration;
+		}
+
+		get containsValueStringLiteral(): boolean {
+			if (!this._containsValueStringLiteral && this.tsNode) {
+				let decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+				let objLit = (<ts.ObjectLiteralExpression> (<ts.CallExpression> decorator.expression).arguments[0])
+				for (let i = 0; i < objLit.properties.length; i++) {
+					let prop: ts.ObjectLiteralElementLike = objLit.properties[i];
+					if (ts.isPropertyAssignment(prop)) {
+						let propAssign: ts.PropertyAssignment = <ts.PropertyAssignment> prop;
+						if (propAssign.name.getText(this.sourceFile) === 'value') {
+							let initializer = propAssign.initializer;
+							if (ts.isStringLiteral(initializer)) {
+								this._containsValueStringLiteral = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			return this._containsValueStringLiteral;
 		}
 		/**
 		 * The name of the property
@@ -1587,6 +1632,7 @@ export module RedPill {
 	 */
 	export class ComputedProperty extends Property {
 		private _component: Component;
+		private _dependentPropNames: string[];
 		private _derivedMethodName: string;
 		private _method: Function;
 		private _methodName: string;
@@ -1626,6 +1672,11 @@ export module RedPill {
 			}
 			return this._decorator;
 		}
+
+		get dependentPropNames(): string[] {
+
+			return this._dependentPropNames;
+		}
 		/**
 		 * If this computed property only contains a single property in it's definition
 		 * then this can be used to move that computed property to a declared property with
@@ -1651,7 +1702,9 @@ export module RedPill {
 			if (!this._method && this.tsNode) {
 				if (this.tsNode.kind === ts.SyntaxKind.MethodDeclaration) {
 					let methodDecl = <ts.MethodDeclaration>this.tsNode;
-					this._method = new Function(methodDecl);
+					let method = new Function(methodDecl);
+					method.sourceFile = this.sourceFile;
+					this._method = method;
 				}
 			}
 			return this._method;
@@ -2012,10 +2065,10 @@ export module RedPill {
 			for (let i = 0; i < node.decorators.length; i++) {
 				let val: ts.Decorator = node.decorators[i];
 				let exp = val.expression;
-				console.log('val.expression is a ', (<any>ts).SyntaxKind[exp.kind]);
-				console.log('val.expression, getSourceFile=', exp.getSourceFile());
-				console.log('val.expression, val.getSourceFile=', val.getSourceFile());
-				console.log('val.expression, node.getSourceFile=', node.getSourceFile());
+				// console.log('val.expression is a ', (<any>ts).SyntaxKind[exp.kind]);
+				// console.log('val.expression, getSourceFile=', exp.getSourceFile());
+				// console.log('val.expression, val.getSourceFile=', val.getSourceFile());
+				// console.log('val.expression, node.getSourceFile=', node.getSourceFile());
 				let expText = exp.getText(sourceFile);
 				let decoratorMatch = /(component\s*\((?:['"]{1}(.*)['"]{1})\))/.exec(expText);
 				if (decoratorMatch && decoratorMatch.length > 0) {

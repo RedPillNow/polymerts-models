@@ -115,6 +115,7 @@ export declare module RedPill {
         private _elementId;
         private _eventName;
         private _eventDeclaration;
+        private _eventDeclarationStr;
         private _isExpression;
         private _method;
         private _methodName;
@@ -124,7 +125,8 @@ export declare module RedPill {
         constructor(node?: ts.Node);
         readonly decorator: ts.Decorator;
         elementId: string;
-        eventDeclaration: string;
+        eventDeclaration: ts.Expression;
+        readonly eventDeclarationStr: string;
         eventName: string;
         isExpression: boolean;
         method: Function;

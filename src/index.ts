@@ -849,7 +849,8 @@ export module RedPill {
 	export class Listener extends ProgramPart {
 		private _elementId: string;
 		private _eventName: string;
-		private _eventDeclaration: string;
+		private _eventDeclaration: ts.Expression;
+		private _eventDeclarationStr: string;
 		private _isExpression: boolean = false;
 		private _method: Function;
 		private _methodName: string;
@@ -885,9 +886,11 @@ export module RedPill {
 		 */
 		get elementId(): string {
 			if (!this._elementId && !this.isExpression && this.tsNode) {
-				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
-				this._elementId = this.eventName ? sigArr[0] : null;
-				this._elementId = this._elementId.replace(/['"`]/g, '');
+				let sigArr: string[] = this.eventDeclarationStr ? this.eventDeclarationStr.split('.') : [];
+				if (sigArr.length > 0 && this.eventName) {
+					this._elementId = this.eventName ? sigArr[0] : null;
+					this._elementId = this._elementId.replace(/['"`]/g, '');
+				}
 			}
 			return this._elementId;
 		}
@@ -899,7 +902,7 @@ export module RedPill {
 		 * The entire listener declaration
 		 * @type {string}
 		 */
-		get eventDeclaration(): string {
+		get eventDeclaration(): ts.Expression {
 			if (!this._eventDeclaration && this.tsNode) {
 				if (this.tsNode.decorators && this.tsNode.decorators.length > 0) {
 					this.tsNode.decorators.forEach((decorator: ts.Decorator, idx) => {
@@ -908,11 +911,13 @@ export module RedPill {
 							switch (decoratorChildNode.kind) {
 								case ts.SyntaxKind.StringLiteral:
 									let listenerStrNode = <ts.StringLiteral>decoratorChildNode;
-									this._eventDeclaration = listenerStrNode.getText(this.sourceFile).replace(/['"`]/g,'');
+									// this._eventDeclaration = listenerStrNode.getText(this.sourceFile).replace(/['"`]/g,'');
+									this._eventDeclaration = listenerStrNode;
 									break;
 								case ts.SyntaxKind.PropertyAccessExpression:
 									let listenerPropAccExp = <ts.PropertyAccessExpression>decoratorChildNode;
-									this._eventDeclaration = listenerPropAccExp.getText(this.sourceFile).replace(/['"`]/g,'');
+									// this._eventDeclaration = listenerPropAccExp.getText(this.sourceFile).replace(/['"`]/g,'');
+									this._eventDeclaration = listenerPropAccExp;
 									break;
 							};
 							ts.forEachChild(decoratorChildNode, parseChildren);
@@ -927,6 +932,13 @@ export module RedPill {
 		set eventDeclaration(eventDeclaration) {
 			this._eventDeclaration = eventDeclaration;
 		}
+
+		get eventDeclarationStr() {
+			if (!this._eventDeclarationStr && this.eventDeclaration) {
+				this._eventDeclarationStr = this.eventDeclaration.getText(this.sourceFile).replace(/['"']/g, '');
+			}
+			return this._eventDeclarationStr;
+		}
 		/**
 		 * The name of the event. If listening for an event on an element, this
 		 * will be something like 'click' or 'tap'
@@ -934,7 +946,7 @@ export module RedPill {
 		 */
 		get eventName(): string {
 			if (!this._eventName && this.tsNode) {
-				let sigArr: string[] = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
+				let sigArr: string[] = this.eventDeclaration ? this.eventDeclarationStr.split('.') : [];
 				this._eventName = sigArr[1] || null;
 				this._eventName = this._eventName ? this._eventName.replace(/['"`]/g, '') : null;
 			}

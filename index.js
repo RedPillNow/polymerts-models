@@ -771,9 +771,11 @@ var RedPill;
         Object.defineProperty(Listener.prototype, "elementId", {
             get: function () {
                 if (!this._elementId && !this.isExpression && this.tsNode) {
-                    var sigArr = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
-                    this._elementId = this.eventName ? sigArr[0] : null;
-                    this._elementId = this._elementId.replace(/['"`]/g, '');
+                    var sigArr = this.eventDeclarationStr ? this.eventDeclarationStr.split('.') : [];
+                    if (sigArr.length > 0 && this.eventName) {
+                        this._elementId = this.eventName ? sigArr[0] : null;
+                        this._elementId = this._elementId.replace(/['"`]/g, '');
+                    }
                 }
                 return this._elementId;
             },
@@ -794,11 +796,11 @@ var RedPill;
                                 switch (decoratorChildNode.kind) {
                                     case ts.SyntaxKind.StringLiteral:
                                         var listenerStrNode = decoratorChildNode;
-                                        _this._eventDeclaration = listenerStrNode.getText(_this.sourceFile).replace(/['"`]/g, '');
+                                        _this._eventDeclaration = listenerStrNode;
                                         break;
                                     case ts.SyntaxKind.PropertyAccessExpression:
                                         var listenerPropAccExp = decoratorChildNode;
-                                        _this._eventDeclaration = listenerPropAccExp.getText(_this.sourceFile).replace(/['"`]/g, '');
+                                        _this._eventDeclaration = listenerPropAccExp;
                                         break;
                                 }
                                 ;
@@ -816,10 +818,20 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Listener.prototype, "eventDeclarationStr", {
+            get: function () {
+                if (!this._eventDeclarationStr && this.eventDeclaration) {
+                    this._eventDeclarationStr = this.eventDeclaration.getText(this.sourceFile).replace(/['"']/g, '');
+                }
+                return this._eventDeclarationStr;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Listener.prototype, "eventName", {
             get: function () {
                 if (!this._eventName && this.tsNode) {
-                    var sigArr = this.eventDeclaration ? this.eventDeclaration.split('.') : [];
+                    var sigArr = this.eventDeclaration ? this.eventDeclarationStr.split('.') : [];
                     this._eventName = sigArr[1] || null;
                     this._eventName = this._eventName ? this._eventName.replace(/['"`]/g, '') : null;
                 }

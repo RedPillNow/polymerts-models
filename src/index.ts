@@ -217,8 +217,19 @@ export module RedPill {
 	 * @extends {ProgramPart}
 	 */
 	export class IncludedBehavior extends ProgramPart {
+		private _behaviorDeclarationString: string;
+		private _elementAccessExpression: ts.ElementAccessExpression;
 		private _name: string;
 		private _polymerIronPageSignature: string;
+		private _propertyAccessExpression: ts.PropertyAccessExpression;
+
+		get behaviorDeclarationString() {
+			return this._behaviorDeclarationString;
+		}
+
+		set behaviorDeclarationString(behaviorDeclarationString) {
+			this._behaviorDeclarationString = behaviorDeclarationString;
+		}
 
 		get decorator() {
 			return this._decorator;
@@ -226,6 +237,23 @@ export module RedPill {
 
 		set decorator(decorator) {
 			this._decorator = decorator;
+		}
+
+		get elementAccessExpression() {
+			if (!this._elementAccessExpression && this.decorator) {
+				let dec: ts.Decorator = <ts.Decorator> this._decorator;
+				let callExp: ts.CallExpression = <ts.CallExpression> dec.expression;
+				let args = callExp.arguments;
+				for (let i = 0; i < args.length; i++) {
+					let arg = args[i];
+					if (ts.isElementAccessExpression(arg)) {
+						arg = <ts.ElementAccessExpression> arg;
+						this._elementAccessExpression = <ts.ElementAccessExpression> arg;
+						break;
+					}
+				}
+			}
+			return this._elementAccessExpression;
 		}
 
 		get name(): string {
@@ -238,6 +266,8 @@ export module RedPill {
 					if (ts.isElementAccessExpression(arg)) {
 						arg = <ts.ElementAccessExpression> arg;
 						this._name = arg.getText(this.sourceFile);
+						console.log('Models.IncludedBehavior, ElementAccessExpression', JSON.stringify(arg));
+						console.log('Models.IncludedBehavior, isPropertyAccessExpression', ts.isPropertyAccessExpression(arg));
 						console.log('Models.IncludedBehavior.name=', this._name);
 						break;
 					}
@@ -259,6 +289,25 @@ export module RedPill {
 		get polymerIronPageSignature() {
 			return this._polymerIronPageSignature;
 		}
+
+		get propertyAccessExpression() {
+			if (!this._propertyAccessExpression && this.elementAccessExpression) {
+				let elemAccess: ts.ElementAccessExpression = this.elementAccessExpression;
+				let idName = elemAccess.argumentExpression.getText(this.sourceFile).replace(/['" ]/g, '');
+				this._propertyAccessExpression = ts.createPropertyAccess(
+					/* ts.Expression */ elemAccess.expression,
+					/* ts.Identifier name */ idName
+				);
+			}else if (!this._propertyAccessExpression && this.behaviorDeclarationString) {
+				let declStringItems = this.behaviorDeclarationString.split('.');
+				this._propertyAccessExpression = ts.createPropertyAccess(
+					ts.createIdentifier(declStringItems[0]),
+					declStringItems[1]
+				);
+			}
+			return this._propertyAccessExpression;
+		}
+
 		toDocOnlyMarkup() {
 			let comment = this.comment ? '\n' + this.comment.toDocOnlyMarkup() : '';
 			let behaviorStr = comment;
@@ -1309,8 +1358,10 @@ export module RedPill {
 		private _containsValueArrayLiteral: boolean = false;
 		private _containsValueBoolean: boolean = false;
 		private _containsValueFunction: boolean = false;
+		private _containsValueNull: boolean = false;
 		private _containsValueObjectDeclaration: boolean = false;
 		private _containsValueStringLiteral: boolean = false;
+		private _containsValueUndefined: boolean = false;
 		private _name: string;
 		protected _params: string;
 		protected _polymerIronPageSignature: string;
@@ -1418,6 +1469,33 @@ export module RedPill {
 			this._containsValueFunction = containsValueFunction;
 		}
 		/**
+		 * True if there is a value definition for a property that contains a null
+		 */
+		get containsValueNull(): boolean {
+			if (!this._containsValueNull && this.tsNode) {
+				let decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+				let objLit = (<ts.ObjectLiteralExpression> (<ts.CallExpression> decorator.expression).arguments[0])
+				for (let i = 0; i < objLit.properties.length; i++) {
+					let prop: ts.ObjectLiteralElementLike = objLit.properties[i];
+					if (ts.isPropertyAssignment(prop)) {
+						let propAssign: ts.PropertyAssignment = <ts.PropertyAssignment> prop;
+						if (propAssign.name.getText(this.sourceFile) === 'value') {
+							let initializer = propAssign.initializer;
+							if (initializer.kind === ts.SyntaxKind.NullKeyword) {
+								this._containsValueNull = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			return this._containsValueNull;
+		}
+
+		set containsValueNull(containsValueNull) {
+			this._containsValueNull = containsValueNull;
+		}
+		/**
 		 * True if there is a value definition for a property that contains an object literal
 		 * @type {boolean}
 		 */
@@ -1442,7 +1520,10 @@ export module RedPill {
 		set containsValueObjectDeclaration(containsValueObjectDeclaration) {
 			this._containsValueObjectDeclaration = containsValueObjectDeclaration;
 		}
-
+		/**
+		 * True if there is a value definition for a property that contains a string literal
+		 * @type {boolean}
+		 */
 		get containsValueStringLiteral(): boolean {
 			if (!this._containsValueStringLiteral && this.tsNode) {
 				let decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
@@ -1462,6 +1543,37 @@ export module RedPill {
 				}
 			}
 			return this._containsValueStringLiteral;
+		}
+
+		set containsValueStringLiteral(containsValueStringLiteral) {
+			this._containsValueStringLiteral = containsValueStringLiteral;
+		}
+		/**
+		 * True if there is a value definition for a property that contains undefined
+		 */
+		get containsValueUndefined(): boolean {
+			if (!this._containsValueUndefined && this.tsNode) {
+				let decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+				let objLit = (<ts.ObjectLiteralExpression> (<ts.CallExpression> decorator.expression).arguments[0])
+				for (let i = 0; i < objLit.properties.length; i++) {
+					let prop: ts.ObjectLiteralElementLike = objLit.properties[i];
+					if (ts.isPropertyAssignment(prop)) {
+						let propAssign: ts.PropertyAssignment = <ts.PropertyAssignment> prop;
+						if (propAssign.name.getText(this.sourceFile) === 'value') {
+							let initializer = propAssign.initializer;
+							if (initializer.kind === ts.SyntaxKind.UndefinedKeyword) {
+								this._containsValueUndefined = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			return this._containsValueUndefined;
+		}
+
+		set containsValueUndefined(containsValueUndefined) {
+			this._containsValueUndefined = containsValueUndefined;
 		}
 		/**
 		 * The name of the property

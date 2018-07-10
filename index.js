@@ -191,12 +191,42 @@ var RedPill;
         function IncludedBehavior() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
+        Object.defineProperty(IncludedBehavior.prototype, "behaviorDeclarationString", {
+            get: function () {
+                return this._behaviorDeclarationString;
+            },
+            set: function (behaviorDeclarationString) {
+                this._behaviorDeclarationString = behaviorDeclarationString;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(IncludedBehavior.prototype, "decorator", {
             get: function () {
                 return this._decorator;
             },
             set: function (decorator) {
                 this._decorator = decorator;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(IncludedBehavior.prototype, "elementAccessExpression", {
+            get: function () {
+                if (!this._elementAccessExpression && this.decorator) {
+                    var dec = this._decorator;
+                    var callExp = dec.expression;
+                    var args = callExp.arguments;
+                    for (var i = 0; i < args.length; i++) {
+                        var arg = args[i];
+                        if (ts.isElementAccessExpression(arg)) {
+                            arg = arg;
+                            this._elementAccessExpression = arg;
+                            break;
+                        }
+                    }
+                }
+                return this._elementAccessExpression;
             },
             enumerable: true,
             configurable: true
@@ -212,6 +242,8 @@ var RedPill;
                         if (ts.isElementAccessExpression(arg)) {
                             arg = arg;
                             this._name = arg.getText(this.sourceFile);
+                            console.log('Models.IncludedBehavior, ElementAccessExpression', JSON.stringify(arg));
+                            console.log('Models.IncludedBehavior, isPropertyAccessExpression', ts.isPropertyAccessExpression(arg));
                             console.log('Models.IncludedBehavior.name=', this._name);
                             break;
                         }
@@ -229,6 +261,22 @@ var RedPill;
         Object.defineProperty(IncludedBehavior.prototype, "polymerIronPageSignature", {
             get: function () {
                 return this._polymerIronPageSignature;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(IncludedBehavior.prototype, "propertyAccessExpression", {
+            get: function () {
+                if (!this._propertyAccessExpression && this.elementAccessExpression) {
+                    var elemAccess = this.elementAccessExpression;
+                    var idName = elemAccess.argumentExpression.getText(this.sourceFile).replace(/['" ]/g, '');
+                    this._propertyAccessExpression = ts.createPropertyAccess(elemAccess.expression, idName);
+                }
+                else if (!this._propertyAccessExpression && this.behaviorDeclarationString) {
+                    var declStringItems = this.behaviorDeclarationString.split('.');
+                    this._propertyAccessExpression = ts.createPropertyAccess(ts.createIdentifier(declStringItems[0]), declStringItems[1]);
+                }
+                return this._propertyAccessExpression;
             },
             enumerable: true,
             configurable: true
@@ -1149,8 +1197,10 @@ var RedPill;
             _this._containsValueArrayLiteral = false;
             _this._containsValueBoolean = false;
             _this._containsValueFunction = false;
+            _this._containsValueNull = false;
             _this._containsValueObjectDeclaration = false;
             _this._containsValueStringLiteral = false;
+            _this._containsValueUndefined = false;
             _this.tsNode = node;
             return _this;
         }
@@ -1248,6 +1298,33 @@ var RedPill;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Property.prototype, "containsValueNull", {
+            get: function () {
+                if (!this._containsValueNull && this.tsNode) {
+                    var decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+                    var objLit = decorator.expression.arguments[0];
+                    for (var i = 0; i < objLit.properties.length; i++) {
+                        var prop = objLit.properties[i];
+                        if (ts.isPropertyAssignment(prop)) {
+                            var propAssign = prop;
+                            if (propAssign.name.getText(this.sourceFile) === 'value') {
+                                var initializer = propAssign.initializer;
+                                if (initializer.kind === ts.SyntaxKind.NullKeyword) {
+                                    this._containsValueNull = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                return this._containsValueNull;
+            },
+            set: function (containsValueNull) {
+                this._containsValueNull = containsValueNull;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Property.prototype, "containsValueObjectDeclaration", {
             get: function () {
                 var _this = this;
@@ -1294,6 +1371,36 @@ var RedPill;
                     }
                 }
                 return this._containsValueStringLiteral;
+            },
+            set: function (containsValueStringLiteral) {
+                this._containsValueStringLiteral = containsValueStringLiteral;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "containsValueUndefined", {
+            get: function () {
+                if (!this._containsValueUndefined && this.tsNode) {
+                    var decorator = this.decorator ? this.decorator : this.tsNode.decorators[0];
+                    var objLit = decorator.expression.arguments[0];
+                    for (var i = 0; i < objLit.properties.length; i++) {
+                        var prop = objLit.properties[i];
+                        if (ts.isPropertyAssignment(prop)) {
+                            var propAssign = prop;
+                            if (propAssign.name.getText(this.sourceFile) === 'value') {
+                                var initializer = propAssign.initializer;
+                                if (initializer.kind === ts.SyntaxKind.UndefinedKeyword) {
+                                    this._containsValueUndefined = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                return this._containsValueUndefined;
+            },
+            set: function (containsValueUndefined) {
+                this._containsValueUndefined = containsValueUndefined;
             },
             enumerable: true,
             configurable: true

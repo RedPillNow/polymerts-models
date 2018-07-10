@@ -30,11 +30,17 @@ export declare module RedPill {
         parseChildren(returnType: ts.SyntaxKind, hasDecorators: boolean): any[];
     }
     class IncludedBehavior extends ProgramPart {
+        private _behaviorDeclarationString;
+        private _elementAccessExpression;
         private _name;
         private _polymerIronPageSignature;
+        private _propertyAccessExpression;
+        behaviorDeclarationString: string;
         decorator: ts.Decorator;
+        readonly elementAccessExpression: ts.ElementAccessExpression;
         name: string;
         readonly polymerIronPageSignature: string;
+        readonly propertyAccessExpression: ts.PropertyAccessExpression;
         toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
@@ -157,8 +163,10 @@ export declare module RedPill {
         private _containsValueArrayLiteral;
         private _containsValueBoolean;
         private _containsValueFunction;
+        private _containsValueNull;
         private _containsValueObjectDeclaration;
         private _containsValueStringLiteral;
+        private _containsValueUndefined;
         private _name;
         protected _params: string;
         protected _polymerIronPageSignature: string;
@@ -172,8 +180,10 @@ export declare module RedPill {
         containsValueArrayLiteral: boolean;
         containsValueBoolean: boolean;
         containsValueFunction: boolean;
+        containsValueNull: boolean;
         containsValueObjectDeclaration: boolean;
-        readonly containsValueStringLiteral: boolean;
+        containsValueStringLiteral: boolean;
+        containsValueUndefined: boolean;
         name: string;
         params: string;
         readonly polymerIronPageSignature: string;

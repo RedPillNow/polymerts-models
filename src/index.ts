@@ -266,9 +266,6 @@ export module RedPill {
 					if (ts.isElementAccessExpression(arg)) {
 						arg = <ts.ElementAccessExpression> arg;
 						this._name = arg.getText(this.sourceFile);
-						console.log('Models.IncludedBehavior, ElementAccessExpression', JSON.stringify(arg));
-						console.log('Models.IncludedBehavior, isPropertyAccessExpression', ts.isPropertyAccessExpression(arg));
-						console.log('Models.IncludedBehavior.name=', this._name);
 						break;
 					}
 				}

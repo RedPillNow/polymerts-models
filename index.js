@@ -224,6 +224,9 @@ var RedPill;
                             this._elementAccessExpression = arg;
                             break;
                         }
+                        else if (ts.isPropertyAccessExpression(arg)) {
+                            this.propertyAccessExpression = arg;
+                        }
                     }
                 }
                 return this._elementAccessExpression;
@@ -274,6 +277,9 @@ var RedPill;
                     this._propertyAccessExpression = ts.createPropertyAccess(ts.createIdentifier(declStringItems[0]), declStringItems[1]);
                 }
                 return this._propertyAccessExpression;
+            },
+            set: function (propertyAccessExpression) {
+                this._propertyAccessExpression = propertyAccessExpression;
             },
             enumerable: true,
             configurable: true

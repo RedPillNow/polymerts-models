@@ -250,6 +250,8 @@ export module RedPill {
 						arg = <ts.ElementAccessExpression> arg;
 						this._elementAccessExpression = <ts.ElementAccessExpression> arg;
 						break;
+					}else if (ts.isPropertyAccessExpression(arg)) {
+						this.propertyAccessExpression = arg;
 					}
 				}
 			}
@@ -303,6 +305,10 @@ export module RedPill {
 				);
 			}
 			return this._propertyAccessExpression;
+		}
+
+		set propertyAccessExpression(propertyAccessExpression) {
+			this._propertyAccessExpression = propertyAccessExpression;
 		}
 
 		toDocOnlyMarkup() {

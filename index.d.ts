@@ -40,7 +40,7 @@ export declare module RedPill {
         readonly elementAccessExpression: ts.ElementAccessExpression;
         name: string;
         readonly polymerIronPageSignature: string;
-        readonly propertyAccessExpression: ts.PropertyAccessExpression;
+        propertyAccessExpression: ts.PropertyAccessExpression;
         toDocOnlyMarkup(): string;
     }
     class Component extends ProgramPart {
